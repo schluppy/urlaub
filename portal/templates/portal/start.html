@@ -1,6 +1,7 @@
 {% extends "portal/base.html" %}
 {% load urlaub %}
 {% block titel %}Reisen {{ jahr }}{% endblock %}
+{% block body_klasse %}breit{% endblock %}
 {% block inhalt %}
 <div class="titelzeile">
   <h1>Reisen {{ jahr }}</h1>
@@ -42,7 +43,7 @@
   {% for r in reisen %}
   <tr class="{% if not r.im_kalender %}alternative{% endif %}{% if r.bis < heute %} vorbei{% endif %}">
     <td class="zeitraum">{{ r.urlaub_beginn|date:"D d.m." }} – {{ r.urlaub_ende|date:"D d.m." }}
-      {% if r.hat_eigenen_urlaub %}<br><span class="leise klein">unterwegs {{ r.von|date:"D d.m." }} – {{ r.bis|date:"D d.m." }}{% if r.abfahrt_feierabend %}, Abfahrt nach Feierabend{% endif %}</span>{% endif %}</td>
+      {% if r.hat_eigenen_urlaub %}<br><span class="leise klein zusatz">unterwegs {{ r.von|date:"D d.m." }} – {{ r.bis|date:"D d.m." }}{% if r.abfahrt_feierabend %}<br>Abfahrt nach Feierabend{% endif %}</span>{% endif %}</td>
     <td><a href="{% url 'reisen:reise' r.pk %}">{{ r.titel }}</a>
       {% if not r.im_kalender %}<span class="marke-klein">Alternative</span>{% endif %}</td>
     <td class="zahl">{% if r.urlaubstage %}{{ r.urlaubstage }}{% else %}<span class="leise">–</span>{% endif %}</td>

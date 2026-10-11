@@ -79,7 +79,8 @@ def kartendaten(reise, oeffentlich=False):
             return
         if ort.hat_koordinaten and ort.pk not in orte:
             orte[ort.pk] = {"name": ort.name, "typ": ort.typ, "lat": float(ort.breite), "lon": float(ort.laenge),
-                            "website": ort.website, "aufenthalte": []}
+                            "website": ort.website, "aufenthalte": [],
+                            "sterne": "" if oeffentlich else ort.sterne}
 
     for e in etappen:
         ort_eintragen(e.von_ort)

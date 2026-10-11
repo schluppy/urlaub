@@ -162,3 +162,8 @@ table.kosten { min-width: 0; max-width: 30rem; background: var(--weiss); border:
 .schnellwahl button { font: inherit; font-size: 0.8rem; padding: 0.15rem 0.5rem; border: 1px solid var(--linie); border-radius: 999px; background: var(--weiss); cursor: pointer; }
 .feld input[type=date] { max-width: 12rem; }
 .feld.haken label { font-weight: normal; }
+.sterne { color: var(--orange-tief); letter-spacing: 0.05em; white-space: nowrap; font-size: 0.9em; }
+
+/* Breite Seiten (Jahresübersicht): mehr Platz für die Tabelle, Kopf bündig */
+body.breit main, body.breit .kopf-innen, body.breit .fuss-seite { max-width: 76rem; }
+.uebersicht .zeitraum .zusatz { display: inline-block; line-height: 1.3; }   /* Umbruch gezielt per <br> */

@@ -7,7 +7,7 @@
   if (!el || !daten || !window.L) return;
   const { orte, strecken } = JSON.parse(daten.textContent);
 
-  const FARBEN = { zuhause: "#173F73", camping: "#E39226", faehre: "#1F6F8B", sonstiges: "#5F6875" };
+  const FARBEN = { zuhause: "#173F73", camping: "#E39226", zwischen: "#8A4F9E", faehre: "#1F6F8B", sonstiges: "#5F6875" };
   const SPEICHER = "urlaub.kartenart";
 
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -45,7 +45,7 @@
 
   const text = (t) => { const d = document.createElement("div"); d.textContent = t; return d.innerHTML; };
   orte.forEach((o) => {
-    let popup = "<b>" + text(o.name) + "</b>";
+    let popup = "<b>" + text(o.name) + "</b>" + (o.sterne ? ' <span class="sterne">' + text(o.sterne) + "</span>" : "");
     o.aufenthalte.forEach((a) => { popup += "<br>" + text(a); });
     if (o.website) popup += '<br><a href="' + encodeURI(o.website) + '" target="_blank" rel="noopener">Website</a>';
     L.circleMarker([o.lat, o.lon], {

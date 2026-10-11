@@ -6,8 +6,17 @@ from django.db import models
 class Ortstyp(models.TextChoices):
     ZUHAUSE = "zuhause", "Zuhause"
     CAMPINGPLATZ = "camping", "Campingplatz"
+    ZWISCHEN = "zwischen", "Zwischenübernachtung"
     FAEHRE = "faehre", "Fährterminal"
     SONSTIGES = "sonstiges", "Sonstiges"
+
+
+class Bewertung(models.IntegerChoices):
+    EINS = 1, "★☆☆☆☆ schlecht"
+    ZWEI = 2, "★★☆☆☆ mäßig"
+    DREI = 3, "★★★☆☆ ordentlich"
+    VIER = 4, "★★★★☆ gut"
+    FUENF = 5, "★★★★★ ausgezeichnet"
 
 
 class Ort(models.Model):
@@ -20,6 +29,8 @@ class Ort(models.Model):
     breite = models.DecimalField("Breite", max_digits=9, decimal_places=6, null=True, blank=True)
     laenge = models.DecimalField("Länge", max_digits=9, decimal_places=6, null=True, blank=True)
     website = models.URLField("Website", max_length=500, blank=True)
+    bewertung = models.PositiveSmallIntegerField("Bewertung", choices=Bewertung.choices, null=True, blank=True,
+                                                 help_text="eure Meinung – erscheint nicht in geteilten Links")
     preise = models.TextField("Preise", blank=True,
                               help_text="z. B. „Stellplatz 34 €/Nacht, Strom 4 €, Kurtaxe 2 € p. P.“")
     notizen = models.TextField("Notizen", blank=True)
@@ -32,6 +43,11 @@ class Ort(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def sterne(self):
+        """„★★★★☆“ oder leer"""
+        return "★" * self.bewertung + "☆" * (5 - self.bewertung) if self.bewertung else ""
 
     @property
     def hat_koordinaten(self):

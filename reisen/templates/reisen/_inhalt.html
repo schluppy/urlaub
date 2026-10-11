@@ -52,7 +52,7 @@
   <tbody>
   {% for b in buchungen %}
   <tr class="{% if b.status == 'storniert' %}storniert{% endif %}">
-    <td>{% if b.ort.website and not pdf %}<a href="{{ b.ort.website }}" target="_blank" rel="noopener">{{ b.ort }}</a>{% else %}{{ b.ort }}{% endif %}
+    <td>{% if b.ort.website and not pdf %}<a href="{{ b.ort.website }}" target="_blank" rel="noopener">{{ b.ort }}</a>{% else %}{{ b.ort }}{% endif %}{% if b.ort.sterne %} <span class="sterne" title="Bewertung {{ b.ort.bewertung }} von 5">{{ b.ort.sterne }}</span>{% endif %}
       {% if b.buchungsnummer %}<br><span class="leise klein">Nr. {{ b.buchungsnummer }}</span>{% endif %}</td>
     <td class="nowrap">{{ b.von|date:"D d.m." }} – {{ b.bis|date:"D d.m." }}</td>
     <td class="zahl">{{ b.naechte }}</td>

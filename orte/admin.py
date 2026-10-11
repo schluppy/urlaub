@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.db.models import Count, Max, Q
 
 from konten.mandant import FamilienMixin
 from reisen.routing import TomTomFehler, ort_geocodieren
@@ -8,18 +9,37 @@ from .models import Ort
 
 @admin.register(Ort)
 class OrtAdmin(FamilienMixin, admin.ModelAdmin):
-    list_display = ["name", "typ", "adresse", "land", "hat_koordinaten"]
-    list_filter = ["typ", "land"]
+    list_display = ["name", "typ", "sterne_anzeige", "aufenthalte", "zuletzt", "land", "hat_koordinaten"]
+    list_filter = ["typ", "bewertung", "land"]
+    radio_fields = {"bewertung": admin.HORIZONTAL}
     search_fields = ["name", "adresse"]
     actions = ["koordinaten_ermitteln"]
     fieldsets = [
-        (None, {"fields": ["name", "typ", "adresse", "land", "website"]}),
+        (None, {"fields": ["name", "typ", "bewertung", "adresse", "land", "website"]}),
         ("Koordinaten", {"fields": [("breite", "laenge")],
                          "description": "Bleiben die Felder leer, ermittelt TomTom sie beim Speichern aus der "
                                         "Adresse. Zum Neuberechnen beide Felder leeren oder die Aktion "
                                         "„Koordinaten aus Adresse ermitteln“ in der Liste nutzen."}),
         ("Preise und Notizen", {"fields": ["preise", "notizen"]}),
     ]
+
+    def get_queryset(self, request):
+        # Aufenthalte und letzter Besuch aus den (nicht stornierten) Buchungen
+        gueltig = ~Q(buchungen__status="storniert")
+        return super().get_queryset(request).annotate(
+            n_aufenthalte=Count("buchungen", filter=gueltig), zuletzt_dort=Max("buchungen__bis", filter=gueltig))
+
+    @admin.display(description="Bewertung", ordering="bewertung")
+    def sterne_anzeige(self, obj):
+        return obj.sterne or "–"
+
+    @admin.display(description="Aufenthalte", ordering="n_aufenthalte")
+    def aufenthalte(self, obj):
+        return obj.n_aufenthalte or "–"
+
+    @admin.display(description="zuletzt dort", ordering="zuletzt_dort")
+    def zuletzt(self, obj):
+        return f"{obj.zuletzt_dort:%d.%m.%Y}" if obj.zuletzt_dort else "–"
 
     @admin.display(boolean=True, description="Koordinaten")
     def hat_koordinaten(self, obj):
