@@ -1,0 +1,75 @@
+{% extends "freigaben/oeffentlich_base.html" %}
+{% load static urlaub %}
+{% block titel %}{{ reise.titel }}{% endblock %}
+{% block kopf %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
+<script src="{% static 'reisen/karte.js' %}" defer></script>{% endblock %}
+{% block inhalt %}
+<div class="reisekopf" style="--monat: {{ farbe }}">
+  <h1>{{ reise.titel }}</h1>
+  <p class="zeitraum-gross">{{ reise.urlaub_beginn|date:"l, d.m.Y" }} – {{ reise.urlaub_ende|date:"l, d.m.Y" }}
+    {% if reise.hat_eigenen_urlaub %}<br><span class="leise">unterwegs {{ reise.von|date:"D d.m." }} – {{ reise.bis|date:"D d.m.Y" }}</span>{% endif %}</p>
+</div>
+
+<dl class="kennzahlen">
+  <div><dt>Entfernung</dt><dd>{{ reise.entfernung_km|km }}</dd></div>
+  <div><dt>Fahrzeit</dt><dd>{{ reise.fahrzeit|dauer }}</dd></div>
+  <div><dt>Nächte</dt><dd>{{ reise.naechte|default:"–" }}</dd></div>
+  {% if details %}<div><dt>Kosten</dt><dd>{{ reise.gesamtkosten|euro }}</dd></div>{% endif %}
+</dl>
+
+{% if karte.orte %}{% include "reisen/_karte.html" with tomtom=False %}{% endif %}
+
+<h2>Etappen</h2>
+{% if etappen %}
+<div class="tabelle-rahmen">
+<table class="liste">
+  <thead><tr><th>Datum</th><th>Strecke</th><th class="zahl">Start</th><th class="zahl">Ankunft</th><th class="zahl">Entfernung</th><th>Unterwegs</th></tr></thead>
+  <tbody>
+  {% for e in etappen %}
+  <tr>
+    <td class="nowrap">{{ e.datum|date:"D d.m." }}</td>
+    <td>{{ e.von_ort }} → {{ e.nach_ort }}</td>
+    <td class="zahl">{{ e.startzeit|time:"H:i"|default:"–" }}</td>
+    <td class="zahl">{% if e.ankunft %}{{ e.ankunft|time:"H:i" }}{% else %}–{% endif %}</td>
+    <td class="zahl">{{ e.entfernung_km|km }}</td>
+    <td class="klein">{% with d=e.routing_details %}{{ d.laender|join:" → " }}{% if d.faehre %}<br>Fähre{% endif %}{% endwith %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}<p class="leise">Noch keine Etappen.</p>{% endif %}
+
+<h2>Übernachtungen</h2>
+{% if buchungen %}
+<div class="tabelle-rahmen">
+<table class="liste">
+  <thead><tr><th>Platz</th><th>Zeitraum</th><th class="zahl">Nächte</th>{% if details %}<th class="zahl">Summe</th><th>Status</th>{% endif %}</tr></thead>
+  <tbody>
+  {% for b in buchungen %}{% if b.status != "storniert" %}
+  <tr>
+    <td>{% if b.ort.website %}<a href="{{ b.ort.website }}" target="_blank" rel="noopener">{{ b.ort }}</a>{% else %}{{ b.ort }}{% endif %}
+      {% if details and b.buchungsnummer %}<br><span class="leise klein">Nr. {{ b.buchungsnummer }}</span>{% endif %}</td>
+    <td class="nowrap">{{ b.von|date:"D d.m." }} – {{ b.bis|date:"D d.m." }}</td>
+    <td class="zahl">{{ b.naechte }}</td>
+    {% if details %}<td class="zahl">{{ b.summe_eur|euro }}</td><td><span class="status {{ b.status }}">{{ b.get_status_display }}</span></td>{% endif %}
+  </tr>
+  {% endif %}{% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}<p class="leise">Noch keine Übernachtungen.</p>{% endif %}
+
+{% if details %}
+  {% if balken %}
+  <h2>Kosten</h2>
+  <table class="liste kosten"><tbody>
+    {% for b in balken %}<tr><td><i class="farbpunkt" style="background:{{ b.farbe }}"></i>{{ b.name }}</td><td class="zahl">{{ b.betrag|euro }}</td></tr>{% endfor %}
+  </tbody><tfoot><tr><th>Gesamt</th><td class="zahl">{{ reise.gesamtkosten|euro }}</td></tr></tfoot></table>
+  {% endif %}
+  {% if links %}<h2>Links</h2>
+  <ul class="links">{% for l in links %}<li><a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.titel }}</a></li>{% endfor %}</ul>{% endif %}
+  {% if reise.notizen %}<h2>Notizen</h2><p class="notizen">{{ reise.notizen|linebreaksbr }}</p>{% endif %}
+{% endif %}
+{% endblock %}

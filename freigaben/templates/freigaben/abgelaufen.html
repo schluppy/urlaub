@@ -1,0 +1,7 @@
+{% extends "freigaben/oeffentlich_base.html" %}
+{% block titel %}Link abgelaufen{% endblock %}
+{% block inhalt %}
+<h1>Dieser Link ist nicht mehr gültig</h1>
+<p>{% if beendet %}Der Link wurde beendet.{% else %}Der Link war bis {{ bis|date:"d.m.Y" }} gültig.{% endif %}
+Bitte frag bei der Person nach, die ihn dir geschickt hat.</p>
+{% endblock %}

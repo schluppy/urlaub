@@ -1,11 +1,13 @@
+import math
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
-from django.views.decorators.http import require_GET
 from django.shortcuts import redirect, render
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from kalender.kalender import MONATSFARBEN
+from orte.models import Ortstyp
 
 from . import dokumente
 from .models import Reise
@@ -25,12 +27,56 @@ def _laden(request, pk):
         raise Http404
 
 
-def kartendaten(reise):
-    """Orte (Markierungen) und Strecken (Linien) für Leaflet."""
+ZUHAUSE_RADIUS_KM = 3   # öffentliche Karte: so weit um Zuhause wird nichts gezeigt
+
+
+def _km(a, b):
+    """Entfernung zweier Punkte [lat, lon] in km (Haversine)."""
+    la1, lo1, la2, lo2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371 * math.asin(math.sqrt(h))
+
+
+def _rand(innen, aussen, mitte, radius):
+    """Punkt auf der Strecke innen→außen, der `radius` km von `mitte` entfernt liegt (Bisektion)."""
+    lo, hi = 0.0, 1.0
+    for _ in range(30):
+        t = (lo + hi) / 2
+        p = [innen[0] + t * (aussen[0] - innen[0]), innen[1] + t * (aussen[1] - innen[1])]
+        lo, hi = (t, hi) if _km(p, mitte) < radius else (lo, t)
+    return [round(innen[0] + hi * (aussen[0] - innen[0]), 5), round(innen[1] + hi * (aussen[1] - innen[1]), 5)]
+
+
+def ohne_zuhause(punkte, zuhause, radius=ZUHAUSE_RADIUS_KM):
+    """Streckenpunkte im Umkreis von Zuhause entfernen; an der Kreisgrenze sauber abschneiden,
+    damit Anfang und Ende der Linie nicht verraten, wo die Familie wohnt."""
+    for mitte in zuhause:
+        innen = [_km(p, mitte) < radius for p in punkte]
+        if not any(innen):
+            continue
+        neu = []
+        for i, p in enumerate(punkte):
+            if innen[i]:
+                if i + 1 < len(punkte) and not innen[i + 1]:
+                    neu.append(_rand(p, punkte[i + 1], mitte, radius))   # Linie verlässt den Kreis
+                continue
+            neu.append(p)
+            if i + 1 < len(punkte) and innen[i + 1]:
+                neu.append(_rand(punkte[i + 1], p, mitte, radius))       # Linie betritt den Kreis
+        punkte = neu
+    return punkte
+
+
+def kartendaten(reise, oeffentlich=False):
+    """Orte (Markierungen) und Strecken (Linien) für Leaflet. Öffentlich ohne Zuhause."""
     etappen = list(reise.etappen.all())
     orte = {}
+    zuhause = {(float(o.breite), float(o.laenge)) for e in etappen for o in (e.von_ort, e.nach_ort)
+               if o.typ == Ortstyp.ZUHAUSE and o.hat_koordinaten} if oeffentlich else set()
 
     def ort_eintragen(ort):
+        if oeffentlich and ort.typ == Ortstyp.ZUHAUSE:
+            return
         if ort.hat_koordinaten and ort.pk not in orte:
             orte[ort.pk] = {"name": ort.name, "typ": ort.typ, "lat": float(ort.breite), "lon": float(ort.laenge),
                             "website": ort.website, "aufenthalte": []}
@@ -53,10 +99,13 @@ def kartendaten(reise):
         text = f"{e.datum:%d.%m.} {e.von_ort} → {e.nach_ort}"
         if e.entfernung_km:
             text += f" · {e.entfernung_km:.0f} km"
-        strecken.append({
-            "punkte": linie or [[float(e.von_ort.breite), float(e.von_ort.laenge)],
-                                [float(e.nach_ort.breite), float(e.nach_ort.laenge)]],
-            "gerade": not linie, "text": text})
+        punkte = linie or [[float(e.von_ort.breite), float(e.von_ort.laenge)],
+                           [float(e.nach_ort.breite), float(e.nach_ort.laenge)]]
+        if zuhause:
+            punkte = ohne_zuhause(punkte, zuhause)
+            if len(punkte) < 2:
+                continue
+        strecken.append({"punkte": punkte, "gerade": not linie, "text": text})
     return {"orte": list(orte.values()), "strecken": strecken}
 
 

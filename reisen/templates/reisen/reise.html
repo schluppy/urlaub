@@ -18,6 +18,7 @@
   {% if etappen %}<form method="post" action="{% url 'reisen:route' reise.pk %}">{% csrf_token %}<button class="knopf zweit" type="submit">Route aktualisieren</button></form>{% endif %}
   <a class="knopf zweit" href="{% url 'reisen:excel' reise.pk %}">Excel</a>
   <a class="knopf zweit" href="{% url 'reisen:pdf' reise.pk %}">PDF</a>
+  <a class="knopf zweit" href="{% url 'freigaben:reise' reise.pk %}">Teilen</a>
 </div>
 
 {% include "reisen/_inhalt.html" %}

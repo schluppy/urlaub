@@ -1,0 +1,21 @@
+{% extends "freigaben/oeffentlich_base.html" %}
+{% block titel %}Urlaubskalender {{ jahr }}{% endblock %}
+{% block kopf %}<style>
+{% include "kalender/_kalender.css" %}
+main { max-width: none; }
+.kalender-rahmen { overflow-x: auto; background: #fff; border: 1px solid var(--linie); border-radius: var(--r); padding: 0.6rem; }
+.raster { min-width: 1150px; }
+.raster th { font-size: 0.95rem; padding: 0.25rem 0.4rem; }
+.raster td { font-size: 0.8rem; height: 1.45rem; border-left-width: 4px; }
+.fuss { font-size: 1rem; margin-top: 0.8rem; }
+.legende i { width: 1.6rem; height: 0.9rem; }
+.legende i.ferienbalken { border-left-width: 4px; }
+</style>{% endblock %}
+{% block inhalt %}
+<div class="kalender">
+<div class="titelzeile"><h1>Urlaubskalender {{ jahr }}</h1></div>
+<div class="aktionen"><a class="knopf" href="{% url 'freigaben:kalender_pdf' freigabe.token %}">PDF</a></div>
+<div class="kalender-rahmen">{% include "kalender/_raster.html" %}</div>
+{% include "kalender/_fuss.html" %}
+</div>
+{% endblock %}

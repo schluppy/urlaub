@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "fahrzeuge",
     "reisen",
     "kalender",
+    "freigaben",
     "portal",
 ]
 

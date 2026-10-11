@@ -16,16 +16,19 @@
     referrerPolicy: "strict-origin-when-cross-origin",
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende',
   });
-  const tomtom = L.tileLayer(el.dataset.tomtom.replace("/0/0/0.png", "/{z}/{x}/{y}.png"), {
-    maxZoom: 20,
-    attribution: '&copy; <a href="https://www.tomtom.com/">TomTom</a>',
-  });
-  const grundkarten = { "OpenStreetMap": osm, "TomTom": tomtom };
+  // TomTom nur angemeldet (Kacheln über den eigenen Server); geteilte Seiten zeigen nur OpenStreetMap
+  const grundkarten = { "OpenStreetMap": osm };
+  if (el.dataset.tomtom) {
+    grundkarten.TomTom = L.tileLayer(el.dataset.tomtom.replace("/0/0/0.png", "/{z}/{x}/{y}.png"), {
+      maxZoom: 20,
+      attribution: '&copy; <a href="https://www.tomtom.com/">TomTom</a>',
+    });
+  }
   let gewaehlt = "OpenStreetMap";
   try { if (grundkarten[localStorage.getItem(SPEICHER)]) gewaehlt = localStorage.getItem(SPEICHER); } catch (e) { /* privat */ }
 
   const karte = L.map(el, { layers: [grundkarten[gewaehlt]], scrollWheelZoom: false });
-  L.control.layers(grundkarten, null, { position: "topright" }).addTo(karte);
+  if (Object.keys(grundkarten).length > 1) L.control.layers(grundkarten, null, { position: "topright" }).addTo(karte);
   L.control.scale({ imperial: false }).addTo(karte);
   karte.on("baselayerchange", (ev) => { try { localStorage.setItem(SPEICHER, ev.name); } catch (e) { /* privat */ } });
   // Mausrad erst nach Klick, damit die Seite beim Scrollen nicht in der Karte hängen bleibt

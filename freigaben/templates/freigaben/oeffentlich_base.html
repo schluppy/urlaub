@@ -1,0 +1,27 @@
+{% load static %}<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="same-origin">
+  <meta name="theme-color" content="#173F73">
+  <title>{% block titel %}{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'portal/portal.css' %}">
+  <link rel="icon" href="{% static 'portal/wohnwagen.svg' %}">
+  {% block kopf %}{% endblock %}
+</head>
+<body>
+<header class="kopf">
+  <div class="kopf-innen">
+    <span class="marke"><img src="{% static 'portal/wohnwagen.svg' %}" alt="" width="40" height="28"><span>Urlaubsplaner</span></span>
+  </div>
+</header>
+<main>
+  {% block inhalt %}{% endblock %}
+</main>
+<footer class="fuss-seite">
+  {% if freigabe %}Geteilt von Familie {{ freigabe.familie }} · Link gültig bis {{ freigabe.gueltig_bis|date:"d.m.Y" }} · {% endif %}<a href="{% url 'portal:datenschutz' %}">Datenschutz</a>
+</footer>
+</body>
+</html>

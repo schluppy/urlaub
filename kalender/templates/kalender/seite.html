@@ -21,6 +21,7 @@ main { max-width: none; }
 </div>
 <div class="aktionen">
   <a class="knopf" href="{% url 'kalender:pdf' jahr %}">PDF</a>
+  <a class="knopf zweit" href="{% url 'freigaben:kalender' jahr %}">Teilen</a>
   <a class="knopf zweit" href="{% url 'portal:jahr' jahr %}">Reisen {{ jahr }}</a>
   {% if user.is_superuser %}<a class="knopf zweit" href="{% url 'admin:kalender_schulferien_changelist' %}">Schulferien pflegen</a>{% endif %}
 </div>

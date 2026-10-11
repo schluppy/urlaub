@@ -1,0 +1,71 @@
+{% extends "portal/base.html" %}
+{% load static %}
+{% block titel %}Teilen: {{ titel }}{% endblock %}
+{% block kopf %}<script src="{% static 'freigaben/teilen.js' %}" defer></script>{% endblock %}
+{% block inhalt %}
+<p class="brotkrumen"><a href="{{ zurueck }}">{{ titel }}</a></p>
+<h1>Teilen: {{ titel }}</h1>
+
+{% if neu %}
+<section class="flaeche betont" aria-labelledby="neu">
+  <h2 id="neu">Link ist fertig</h2>
+  <p>Gültig bis <b>{{ neu.gueltig_bis|date:"l, d.m.Y" }}</b>{% if neu.fuer %} · für {{ neu.fuer }}{% endif %}{% if neu.mit_details %} · mit Kosten und Buchungsdetails{% endif %}.
+     Wer den Link hat, kann {% if neu.reise %}die Reise{% else %}den Kalender{% endif %} ohne Anmeldung ansehen.</p>
+  <input class="link-feld" type="text" readonly value="{{ neu.link }}" aria-label="Link" onclick="this.select()">
+  {% include "freigaben/_knoepfe.html" with f=neu %}
+</section>
+{% endif %}
+
+<section class="flaeche">
+  <h2>{% if neu %}Weiteren Link erstellen{% else %}Neuen Link erstellen{% endif %}</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="feld">
+      <label for="{{ form.gueltig_bis.id_for_label }}">Gültig bis</label>
+      <input type="date" name="gueltig_bis" id="{{ form.gueltig_bis.id_for_label }}" required
+             value="{{ form.gueltig_bis.value|date:'Y-m-d'|default:form.gueltig_bis.value }}"
+             min="{{ heute|date:'Y-m-d' }}" max="{{ max_datum|date:'Y-m-d' }}">
+      <span class="schnellwahl" data-ziel="{{ form.gueltig_bis.id_for_label }}">
+        <button type="button" class="klein" data-tage="1">1 Tag</button>
+        <button type="button" class="klein" data-tage="7">1 Woche</button>
+        <button type="button" class="klein" data-tage="30">1 Monat</button>
+      </span>
+      {{ form.gueltig_bis.errors }}
+    </div>
+    <div class="feld">
+      <label for="{{ form.fuer.id_for_label }}">Für <span class="leise klein">(optional, nur für eure Übersicht)</span></label>
+      <input type="text" name="fuer" id="{{ form.fuer.id_for_label }}" maxlength="80" value="{{ form.fuer.value|default:'' }}" placeholder="z. B. Oma, Nachbarn">
+    </div>
+    {% if form.mit_details %}
+    <div class="feld haken">
+      <label><input type="checkbox" name="mit_details" {% if form.mit_details.value %}checked{% endif %}>
+        Kosten und Buchungsdetails zeigen</label>
+      <p class="leise klein">Sonst sehen Empfänger nur Zeitraum, Etappen, Plätze und Karte – ohne Preise, Buchungsnummern, Links und Notizen. Euer Zuhause wird nie gezeigt.</p>
+    </div>
+    {% endif %}
+    <button class="knopf" type="submit">Link erstellen</button>
+  </form>
+</section>
+
+{% if aktive %}
+<h2>Aktive Links</h2>
+<ul class="freigaben">
+  {% for f in aktive %}
+  <li class="flaeche">
+    <p><b>{% if f.fuer %}{{ f.fuer }}{% else %}ohne Namen{% endif %}</b> · bis {{ f.gueltig_bis|date:"d.m.Y" }}{% if f.mit_details %} · mit Kosten{% endif %}<br>
+      <span class="leise klein">erstellt {{ f.erstellt_am|date:"d.m.Y" }}{% if f.erstellt_von %} von {{ f.erstellt_von }}{% endif %} · {{ f.aufrufe }} Aufruf{{ f.aufrufe|pluralize:"e" }}{% if f.zuletzt_am %}, zuletzt {{ f.zuletzt_am|date:"d.m. H:i" }}{% endif %}</span></p>
+    {% include "freigaben/_knoepfe.html" %}
+    <form method="post" action="{% url 'freigaben:beenden' f.pk %}" class="beenden">{% csrf_token %}<button class="knopf gefahr" type="submit">Beenden</button></form>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if alte %}
+<h2>Abgelaufen oder beendet</h2>
+<ul class="klein leise">
+  {% for f in alte %}<li>{% if f.fuer %}{{ f.fuer }}{% else %}ohne Namen{% endif %} · bis {{ f.gueltig_bis|date:"d.m.Y" }}{% if f.beendet_am %} · beendet {{ f.beendet_am|date:"d.m.Y" }}{% endif %} · {{ f.aufrufe }} Aufruf{{ f.aufrufe|pluralize:"e" }}</li>{% endfor %}
+</ul>
+{% endif %}
+{% endblock %}

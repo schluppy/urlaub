@@ -1,0 +1,9 @@
+<h2>Karte</h2>
+<div id="karte" class="karte"{% if tomtom %} data-tomtom="{% url 'reisen:kachel' 0 0 0 %}"{% endif %} role="region" aria-label="Karte der Reise"></div>
+<p class="klein leise karte-legende">
+  {% if tomtom %}<span><i class="farbpunkt rund" style="background:#173F73"></i>Zuhause</span>{% endif %}
+  <span><i class="farbpunkt rund" style="background:#E39226"></i>Campingplatz</span>
+  <span><i class="farbpunkt rund" style="background:#1F6F8B"></i>Fährterminal</span>
+  {% if karte.strecken %}<span>gestrichelt: Luftlinie, Route noch nicht berechnet</span>{% endif %}
+</p>
+{{ karte|json_script:"kartendaten" }}

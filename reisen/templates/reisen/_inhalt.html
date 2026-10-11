@@ -12,17 +12,7 @@
 <ul class="hinweise">{% for stufe, text in hinweise %}<li class="hinweis {{ stufe }}">{{ text }}</li>{% endfor %}</ul>
 {% endif %}
 
-{% if not pdf and karte.orte %}
-<h2>Karte</h2>
-<div id="karte" class="karte" data-tomtom="{% url 'reisen:kachel' 0 0 0 %}" role="region" aria-label="Karte der Reise"></div>
-<p class="klein leise karte-legende">
-  <span><i class="farbpunkt rund" style="background:#173F73"></i>Zuhause</span>
-  <span><i class="farbpunkt rund" style="background:#E39226"></i>Campingplatz</span>
-  <span><i class="farbpunkt rund" style="background:#1F6F8B"></i>Fährterminal</span>
-  {% if karte.strecken %}<span>gestrichelt: Luftlinie, Route noch nicht berechnet</span>{% endif %}
-</p>
-{{ karte|json_script:"kartendaten" }}
-{% endif %}
+{% if not pdf and karte.orte %}{% include "reisen/_karte.html" with tomtom=True %}{% endif %}
 
 <h2>Etappen</h2>
 {% if etappen %}

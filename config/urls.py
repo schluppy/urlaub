@@ -10,5 +10,6 @@ urlpatterns = [
     path("verwaltung/", admin.site.urls),
     path("kalender/", include("kalender.urls")),
     path("reise/", include("reisen.urls")),
+    path("teilen/", include("freigaben.urls")),
     path("", include("portal.urls")),
 ]
