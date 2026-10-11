@@ -1,0 +1,8 @@
+<table class="raster">
+  <colgroup>{% for m in monate %}<col>{% endfor %}</colgroup>
+  <thead><tr>{% for m in monate %}<th style="background:{{ m.farbe }}">{{ m.name }}</th>{% endfor %}</tr></thead>
+  <tbody>
+  {% for zeile in zeilen %}<tr>{% for z in zeile %}{% if z.tag %}<td class="{{ z.klassen|join:' ' }}{% if z.ferien %} ferien{% endif %}" style="{{ z.stil }}"><span class="n">{{ z.zahl }}</span><span class="w">{{ z.wochentag }}</span><span class="t">{{ z.text|truncatechars:22 }}</span></td>{% else %}<td class="leer"></td>{% endif %}{% endfor %}</tr>
+  {% endfor %}
+  </tbody>
+</table>

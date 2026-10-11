@@ -1,0 +1,16 @@
+{% extends "portal/base.html" %}
+{% block titel %}Anmelden{% endblock %}
+{% block inhalt %}
+{% if eintrag %}
+<h1>Hallo {{ eintrag.person.name }}</h1>
+<form method="post" class="flaeche">
+  {% csrf_token %}
+  <p>Du meldest dich an als <b>{{ eintrag.person.email }}</b>.</p>
+  <button class="knopf" type="submit">Jetzt anmelden</button>
+</form>
+{% else %}
+<h1>Dieser Link funktioniert nicht mehr</h1>
+<p>Anmeldelinks gelten nur kurze Zeit und nur einmal. Fordere einfach einen neuen an.</p>
+<p><a class="knopf" href="{% url 'portal:anmelden' %}">Neuen Link anfordern</a></p>
+{% endif %}
+{% endblock %}

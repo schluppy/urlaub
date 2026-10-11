@@ -1,0 +1,448 @@
+"""Reisen mit Etappen, Buchungen, Kostenpositionen und Links.
+
+Alles, was in der Tabelle von Hand gerechnet wurde (Nächte, Dieselkosten,
+Summen, Urlaubstage), wird hier berechnet und nicht gespeichert.
+"""
+from datetime import date, datetime, timedelta
+from decimal import ROUND_HALF_UP, Decimal
+
+from django.core.exceptions import ValidationError
+from django.db import models
+
+from fahrzeuge.models import Fahrzeugprofil
+from kalender.tage import ist_feiertag, urlaubstage
+from orte.models import Ort, Ortstyp
+
+CENT = Decimal("0.01")
+
+
+def _cent(betrag):
+    return Decimal(betrag).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+class Reise(models.Model):
+    familie = models.ForeignKey("konten.Familie", on_delete=models.CASCADE, related_name="reisen")
+    titel = models.CharField("Titel", max_length=80, help_text="erscheint so im Kalender")
+    # Urlaub: die freien Tage inkl. Vor- und Nachbereitung – bestimmt Kalender und Urlaubstage.
+    urlaub_von = models.DateField("Urlaub von", null=True, blank=True,
+                                  help_text="erster Urlaubstag (inkl. Vorbereitung); leer = wie Reisezeit")
+    urlaub_bis = models.DateField("Urlaub bis", null=True, blank=True,
+                                  help_text="letzter Urlaubstag (inkl. Nachbereitung)")
+    # Reisezeit: mit dem Gespann unterwegs – bestimmt Etappen, Buchungen, Nächte.
+    von = models.DateField("Reisezeit von", help_text="Abfahrt. Liegt sie an einem Arbeitstag vor dem Urlaub, "
+                                                      "gilt sie als „Abfahrt nach Feierabend“.")
+    bis = models.DateField("Reisezeit bis", help_text="Rückkehr")
+    fahrzeugprofil = models.ForeignKey(Fahrzeugprofil, verbose_name="Fahrzeugprofil", on_delete=models.PROTECT,
+                                       null=True, blank=True, related_name="reisen")
+    verbrauch_l_100km = models.DecimalField(
+        "Ø Verbrauch (L/100 km)", max_digits=4, decimal_places=1, null=True, blank=True,
+        help_text="leer = Wert aus dem Fahrzeugprofil")
+    dieselpreis = models.DecimalField("Dieselpreis (€/L)", max_digits=5, decimal_places=3, default=Decimal("1.80"))
+    vignetten_meiden = models.CharField(
+        "Vignettenpflichtige Straßen meiden in", max_length=60, blank=True,
+        help_text="ISO-3-Kürzel mit Komma, z. B. CHE,AUT. Leer = Vignettenstraßen erlaubt.")
+    im_kalender = models.BooleanField("im Kalender", default=True,
+                                      help_text="aus für Alternativen, die nur geplant werden")
+    notizen = models.TextField("Notizen", blank=True)
+
+    class Meta:
+        verbose_name = "Reise"
+        verbose_name_plural = "Reisen"
+        ordering = ["von"]
+
+    def __str__(self):
+        return f"{self.titel} ({self.von:%d.%m.%Y})"
+
+    def clean(self):
+        fehler = {}
+        if self.von and self.bis and self.bis < self.von:
+            fehler["bis"] = "Die Rückkehr liegt vor der Abfahrt."
+        if bool(self.urlaub_von) != bool(self.urlaub_bis):
+            fehler["urlaub_bis" if self.urlaub_von else "urlaub_von"] = "Bitte Urlaub von und bis angeben (oder beide leer)."
+        elif self.urlaub_von and self.urlaub_bis < self.urlaub_von:
+            fehler["urlaub_bis"] = "Das Urlaubsende liegt vor dem Urlaubsbeginn."
+        if fehler:
+            raise ValidationError(fehler)
+
+    # --- Zeitraum ------------------------------------------------------------
+
+    @property
+    def urlaub_beginn(self):
+        return self.urlaub_von or self.von
+
+    @property
+    def urlaub_ende(self):
+        return self.urlaub_bis or self.bis
+
+    @property
+    def hat_eigenen_urlaub(self):
+        return (self.urlaub_beginn, self.urlaub_ende) != (self.von, self.bis)
+
+    @property
+    def kalender_beginn(self):
+        """Erster Tag im Kalender: Urlaubsbeginn oder frühere Abfahrt."""
+        return min(self.von, self.urlaub_beginn)
+
+    @property
+    def kalender_ende(self):
+        return max(self.bis, self.urlaub_ende)
+
+    def ist_urlaub(self, tag):
+        return self.urlaub_beginn <= tag <= self.urlaub_ende
+
+    @property
+    def abfahrt_feierabend(self):
+        """Abfahrt an einem Arbeitstag vor dem Urlaub – zählt nicht als Urlaubstag."""
+        if self.von < self.urlaub_beginn and self.von.weekday() < 5 and not ist_feiertag(self.von, self.bundesland):
+            return self.von
+        return None
+
+    @property
+    def urlaubstage(self):
+        return urlaubstage(self.urlaub_beginn, self.urlaub_ende, self.bundesland)
+
+    @property
+    def bundesland(self):
+        return self.familie.bundesland
+
+    @property
+    def jahr(self):
+        return self.urlaub_beginn.year
+
+    # --- Fahrt ---------------------------------------------------------------
+
+    @property
+    def verbrauch(self):
+        if self.verbrauch_l_100km is not None:
+            return self.verbrauch_l_100km
+        return self.fahrzeugprofil.verbrauch_l_100km if self.fahrzeugprofil else None
+
+    def _etappen(self):
+        # nutzt vorab geladene Etappen (prefetch_related), falls vorhanden
+        return list(self.etappen.all())
+
+    @property
+    def entfernung_km(self):
+        return sum((e.entfernung_km or 0 for e in self._etappen()), Decimal(0))
+
+    @property
+    def fahrzeit(self):
+        return sum((e.fahrzeit or timedelta() for e in self._etappen()), timedelta())
+
+    @property
+    def dieselliter(self):
+        liter = Decimal(0)
+        for e in self._etappen():
+            if e.entfernung_km and e.verbrauch is not None:
+                liter += e.entfernung_km * e.verbrauch / 100
+        return liter
+
+    @property
+    def dieselkosten(self):
+        return _cent(self.dieselliter * self.dieselpreis)
+
+    # --- Kosten --------------------------------------------------------------
+
+    def _buchungen(self):
+        return [b for b in self.buchungen.all() if b.status != Buchungsstatus.STORNIERT]
+
+    @property
+    def naechte(self):
+        return sum(b.naechte for b in self._buchungen())
+
+    @property
+    def buchungen_eur(self):
+        return sum((b.summe_eur for b in self._buchungen()), Decimal(0))
+
+    @property
+    def kostenpositionen_eur(self):
+        return sum((k.betrag for k in self.kosten.all()), Decimal(0))
+
+    @property
+    def gesamtkosten(self):
+        return self.dieselkosten + self.buchungen_eur + self.kostenpositionen_eur
+
+    @property
+    def offen_eur(self):
+        return sum((b.rest_eur for b in self._buchungen() if b.status != Buchungsstatus.BEZAHLT), Decimal(0))
+
+    @property
+    def ziele(self):
+        """Gebuchte Orte in Reihenfolge, ohne Doppelte."""
+        namen = []
+        for b in sorted(self._buchungen(), key=lambda b: b.von):
+            if b.ort.name not in namen:
+                namen.append(b.ort.name)
+        return namen
+
+    def aufenthalte(self):
+        """Übernachtungen laut Etappen: [(Ort, Ankunft, Abfahrt)] – Ankunft mit einer Etappe,
+        Abfahrt mit der nächsten. Zuhause und Zwischenhalte ohne Nacht zählen nicht."""
+        etappen = self._etappen()
+        ergebnis = []
+        for etappe, naechste in zip(etappen, etappen[1:] + [None]):
+            ort = etappe.nach_ort
+            if ort.typ == Ortstyp.ZUHAUSE:
+                continue
+            abfahrt = naechste.datum if naechste else self.bis
+            if abfahrt > etappe.datum:
+                ergebnis.append((ort, etappe.datum, abfahrt))
+        return ergebnis
+
+    def kostenaufstellung(self):
+        """[(Bezeichnung, Betrag €)] – Diesel, Übernachtungen, dann je Kostenart."""
+        posten = [("Diesel", self.dieselkosten), ("Übernachtungen", self.buchungen_eur)]
+        for art, label in Kostenart.choices:
+            betrag = sum((k.betrag for k in self.kosten.all() if k.art == art), Decimal(0))
+            if betrag:
+                posten.append((label, betrag))
+        return [(name, betrag) for name, betrag in posten if betrag]
+
+    def hinweise(self, heute=None):
+        """Was in der Tabelle früher unbemerkt blieb: fehlende Routen, Lücken, Fälligkeiten."""
+        heute = heute or date.today()
+        hinweise = []
+        etappen = self._etappen()
+        ohne = [e for e in etappen if not e.entfernung_km]
+        if ohne:
+            hinweise.append(("warnung", f"{len(ohne)} Etappe{'n' if len(ohne) > 1 else ''} ohne Entfernung – "
+                                        "„Route aktualisieren“ ausführen."))
+        for e in etappen:
+            if not (self.von <= e.datum <= self.bis):
+                hinweise.append(("warnung", f"Etappe {e} liegt außerhalb des Reisezeitraums."))
+        if etappen and not self.verbrauch:
+            hinweise.append(("warnung", "Kein Verbrauch hinterlegt – Dieselkosten fehlen."))
+
+        buchungen = self._buchungen()
+        if buchungen:
+            belegt = set()
+            for b in buchungen:
+                belegt.update(b.von + timedelta(days=i) for i in range(b.naechte))
+            # alle Nächte der Reisezeit: von der Abfahrt bis zur Nacht vor der Rückkehr
+            luecken = [self.von + timedelta(days=i) for i in range((self.bis - self.von).days)
+                       if self.von + timedelta(days=i) not in belegt]
+            if luecken:
+                tage = ", ".join(f"{t:%d.%m.}" for t in luecken[:8]) + (" …" if len(luecken) > 8 else "")
+                hinweise.append(("info", f"Nächte ohne Buchung: {tage} (z. B. Fähre oder noch offen)"))
+        for b in buchungen:
+            if b.status != Buchungsstatus.BEZAHLT and b.rest > 0 and b.rest_faellig_am:
+                if b.rest_faellig_am < heute:
+                    hinweise.append(("fehler", f"Restzahlung {b.ort} war am {b.rest_faellig_am:%d.%m.%Y} fällig."))
+                elif b.rest_faellig_am <= heute + timedelta(days=30):
+                    hinweise.append(("warnung", f"Restzahlung {b.ort} fällig am {b.rest_faellig_am:%d.%m.%Y}."))
+        return hinweise
+
+
+class Etappe(models.Model):
+    reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="etappen")
+    datum = models.DateField("Datum")
+    von_ort = models.ForeignKey(Ort, verbose_name="Von", on_delete=models.PROTECT, related_name="+")
+    nach_ort = models.ForeignKey(Ort, verbose_name="Nach", on_delete=models.PROTECT, related_name="+")
+    startzeit = models.TimeField("Start", null=True, blank=True)
+    pause = models.DurationField("Pause", default=timedelta(), help_text="hh:mm:ss")
+    fahrzeugprofil = models.ForeignKey(
+        Fahrzeugprofil, verbose_name="Fahrzeug abweichend", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="+", help_text="leer = Fahrzeug der Reise")
+    entfernung_km = models.DecimalField("Entfernung (km)", max_digits=7, decimal_places=1, null=True, blank=True)
+    fahrzeit = models.DurationField("Fahrzeit", null=True, blank=True, help_text="hh:mm:ss")
+    routing_stand = models.DateTimeField("Routing-Stand", null=True, blank=True,
+                                         help_text="Zeitpunkt der letzten Berechnung mit TomTom")
+    routing_details = models.JSONField("Routing-Details", default=dict, blank=True, editable=False)
+
+    class Meta:
+        verbose_name = "Etappe"
+        verbose_name_plural = "Etappen"
+        ordering = ["reise", "datum", "startzeit", "id"]   # Reihenfolge ergibt sich aus Datum und Start
+
+    def __str__(self):
+        return f"{self.datum:%d.%m.} {self.von_ort} → {self.nach_ort}"
+
+    def clean(self):
+        if self.von_ort_id and self.von_ort_id == self.nach_ort_id:
+            raise ValidationError("Start und Ziel sind derselbe Ort.")
+
+    @property
+    def fahrzeug(self):
+        return self.fahrzeugprofil or self.reise.fahrzeugprofil
+
+    @property
+    def verbrauch(self):
+        if self.fahrzeugprofil:
+            return self.fahrzeugprofil.verbrauch_l_100km
+        return self.reise.verbrauch
+
+    @property
+    def karten_link(self):
+        """Google-Maps-Route aus den Koordinaten (ersetzt die von Hand gepflegten Links)."""
+        if not (self.von_ort.hat_koordinaten and self.nach_ort.hat_koordinaten):
+            return ""
+        return ("https://www.google.com/maps/dir/?api=1"
+                f"&origin={self.von_ort.koordinaten}&destination={self.nach_ort.koordinaten}&travelmode=driving")
+
+    @property
+    def ankunft(self):
+        """Start + Fahrzeit + Pause; None, solange etwas fehlt."""
+        if self.startzeit is None or self.fahrzeit is None:
+            return None
+        return datetime.combine(self.datum, self.startzeit) + self.fahrzeit + (self.pause or timedelta())
+
+
+class Buchungsstatus(models.TextChoices):
+    GEPLANT = "geplant", "geplant"
+    ANGEFRAGT = "angefragt", "angefragt"
+    GEBUCHT = "gebucht", "gebucht"
+    ANGEZAHLT = "angezahlt", "angezahlt"
+    BEZAHLT = "bezahlt", "bezahlt"
+    STORNIERT = "storniert", "storniert"
+
+
+class Buchung(models.Model):
+    reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="buchungen")
+    ort = models.ForeignKey(Ort, verbose_name="Ort", on_delete=models.PROTECT, related_name="buchungen")
+    von = models.DateField("Anreise")
+    bis = models.DateField("Abreise")
+    # Entweder Preis pro Nacht oder Gesamtpreis für den Aufenthalt; der Gesamtpreis gilt, wenn gesetzt.
+    preis_pro_nacht = models.DecimalField("Preis/Nacht", max_digits=8, decimal_places=2, null=True, blank=True)
+    gesamtpreis = models.DecimalField("Gesamtpreis", max_digits=9, decimal_places=2, null=True, blank=True,
+                                      help_text="für den ganzen Aufenthalt – statt Preis/Nacht")
+    waehrung = models.CharField("Währung", max_length=3, default="EUR")
+    wechselkurs = models.DecimalField("Kurs", max_digits=10, decimal_places=4, default=Decimal(1),
+                                      help_text="1 € = … Fremdwährung (z. B. 0,8653 GBP)")
+    anzahlung = models.DecimalField("Anzahlung", max_digits=8, decimal_places=2, default=Decimal(0),
+                                    help_text="in Buchungswährung")
+    rest_faellig_am = models.DateField("Rest fällig am", null=True, blank=True)
+    status = models.CharField("Status", max_length=12, choices=Buchungsstatus.choices,
+                              default=Buchungsstatus.GEPLANT)
+    buchungsnummer = models.CharField("Buchungsnr.", max_length=60, blank=True)
+    notiz = models.CharField("Notiz", max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "Buchung"
+        verbose_name_plural = "Buchungen"
+        ordering = ["reise", "von"]
+
+    def __str__(self):
+        return f"{self.ort} {self.von:%d.%m.}–{self.bis:%d.%m.%Y}"
+
+    def clean(self):
+        if self.von and self.bis and self.bis <= self.von:
+            raise ValidationError({"bis": "Die Abreise muss nach der Anreise liegen."})
+        if self.wechselkurs is not None and self.wechselkurs <= 0:
+            raise ValidationError({"wechselkurs": "Kurs muss größer als 0 sein."})
+        if (self.preis_pro_nacht is not None and self.gesamtpreis is not None and self.von and self.bis
+                and _cent(self.preis_pro_nacht * self.naechte) != _cent(self.gesamtpreis)):
+            raise ValidationError({"gesamtpreis": "Bitte entweder Preis/Nacht oder Gesamtpreis angeben – "
+                                                  f"{self.naechte} × {self.preis_pro_nacht} ergibt nicht "
+                                                  f"{self.gesamtpreis}."})
+
+    @property
+    def naechte(self):
+        return (self.bis - self.von).days
+
+    @property
+    def ist_pauschal(self):
+        return self.gesamtpreis is not None
+
+    @property
+    def summe(self):
+        """In Buchungswährung: Gesamtpreis, sonst Nächte × Preis/Nacht (ohne Preis: 0)."""
+        if self.gesamtpreis is not None:
+            return self.gesamtpreis
+        return self.naechte * (self.preis_pro_nacht or Decimal(0))
+
+    @property
+    def preis_je_nacht(self):
+        """Zur Anzeige, bei Pauschalen umgerechnet."""
+        if self.gesamtpreis is not None:
+            return _cent(self.gesamtpreis / self.naechte) if self.naechte else None
+        return self.preis_pro_nacht
+
+    @property
+    def rest(self):
+        return self.summe - self.anzahlung
+
+    def in_eur(self, betrag):
+        return _cent(betrag / self.wechselkurs)
+
+    @property
+    def summe_eur(self):
+        return self.in_eur(self.summe)
+
+    @property
+    def rest_eur(self):
+        return self.in_eur(self.rest)
+
+    @property
+    def ist_fremdwaehrung(self):
+        return self.waehrung.upper() != "EUR"
+
+
+class Kostenart(models.TextChoices):
+    FAEHRE = "faehre", "Fähre"
+    VIGNETTE = "vignette", "Vignette"
+    MAUT = "maut", "Maut"
+    SONSTIGES = "sonstiges", "Sonstiges"
+
+
+class Kostenposition(models.Model):
+    reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="kosten")
+    art = models.CharField("Art", max_length=12, choices=Kostenart.choices, default=Kostenart.SONSTIGES)
+    betrag = models.DecimalField("Betrag (€)", max_digits=8, decimal_places=2)
+    notiz = models.CharField("Notiz", max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "Kostenposition"
+        verbose_name_plural = "Kostenpositionen"
+        ordering = ["reise", "art"]
+
+    def __str__(self):
+        return f"{self.get_art_display()} {self.betrag} €"
+
+
+class Link(models.Model):
+    reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="links")
+    titel = models.CharField("Titel", max_length=150)
+    url = models.URLField("URL", max_length=1000)
+
+    class Meta:
+        verbose_name = "Link"
+        verbose_name_plural = "Links"
+        ordering = ["reise", "id"]   # in der Reihenfolge der Eingabe
+
+    def __str__(self):
+        return self.titel
+
+
+class Erinnerung(models.Model):
+    """Eigene Erinnerung, z. B. „Fähre buchbar ab …“. Wird am Datum per Mail verschickt."""
+
+    familie = models.ForeignKey("konten.Familie", on_delete=models.CASCADE, related_name="erinnerungen")
+    reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="erinnerungen", null=True, blank=True)
+    datum = models.DateField("Erinnern am")
+    text = models.CharField("Text", max_length=200)
+    gesendet_am = models.DateTimeField("gesendet am", null=True, blank=True)
+    erledigt = models.BooleanField("erledigt", default=False)
+
+    class Meta:
+        verbose_name = "Erinnerung"
+        verbose_name_plural = "Erinnerungen"
+        ordering = ["datum"]
+
+    def __str__(self):
+        return f"{self.datum:%d.%m.%Y} {self.text}"
+
+    def save(self, *args, **kwargs):
+        if self.reise_id and not self.familie_id:
+            self.familie_id = self.reise.familie_id
+        super().save(*args, **kwargs)
+
+
+class Versandprotokoll(models.Model):
+    """Merkt sich automatisch erzeugte Erinnerungen, damit jede nur einmal kommt."""
+
+    schluessel = models.CharField(max_length=100, unique=True)
+    gesendet_am = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Versandprotokoll"
+        verbose_name_plural = "Versandprotokoll"

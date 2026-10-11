@@ -1,0 +1,148 @@
+/* Farben aus dem Jahreskalender: Dunkelblau (Schulferien), Orange (Urlaub), Rot (Feiertag). */
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-SemiBold.ttf"); font-weight: 600; }
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Bold.ttf"); font-weight: 700; }
+
+:root {
+  --blau: #173F73;
+  --blau-hell: #e6ecf4;
+  --orange: #F7B955;
+  --orange-tief: #E39226;
+  --orange-hell: #fdf1dc;
+  --rot: #C62828;
+  --rot-hell: #f8e0de;
+  --gruen: #2E7D6E;
+  --gruen-hell: #e2f0ec;
+  --papier: #f6f4ef;
+  --weiss: #ffffff;
+  --tinte: #1c2430;
+  --grau: #5f6875;
+  --linie: #d9d5cc;
+
+  --schrift: system-ui, -apple-system, "Segoe UI", Roboto, "DejaVu Sans", sans-serif;
+  --schmal: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --mass: 64rem;
+  --r: 8px;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; font-family: var(--schrift); line-height: 1.5; color: var(--tinte);
+  background: var(--papier); font-variant-numeric: tabular-nums;
+}
+a { color: var(--blau); text-underline-offset: 2px; }
+:focus-visible { outline: 3px solid var(--orange-tief); outline-offset: 2px; }
+
+.kopf { background: var(--blau); color: var(--weiss); border-bottom: 4px solid var(--orange); }
+.kopf-innen {
+  max-width: var(--mass); margin: 0 auto; padding: 0.7rem 1rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem;
+}
+.marke { display: flex; align-items: center; gap: 0.6rem; color: var(--weiss); text-decoration: none;
+  font-family: var(--schmal); font-weight: 600; font-size: 1.5rem; letter-spacing: 0.02em; }
+nav.haupt { display: flex; flex-wrap: wrap; gap: 0.2rem 1.1rem; align-items: center; flex: 1; }
+nav.haupt a, nav.haupt button {
+  color: var(--weiss); text-decoration: none; font: inherit; padding: 0.15rem 0;
+  border: 0; background: none; cursor: pointer; border-bottom: 2px solid transparent;
+}
+nav.haupt a[aria-current="page"], nav.haupt a:hover, nav.haupt button:hover { border-bottom-color: var(--orange); }
+nav.haupt form { margin-left: auto; }
+
+main { max-width: var(--mass); margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+h1, h2 { font-family: var(--schmal); font-weight: 600; color: var(--blau); line-height: 1.15; }
+h1 { font-size: 2.2rem; margin: 0 0 0.5rem; }
+h2 { font-size: 1.5rem; margin: 2rem 0 0.6rem; }
+p { max-width: 42rem; margin: 0 0 0.8rem; }
+.leise { color: var(--grau); }
+.klein { font-size: 0.85rem; }
+
+.flaeche { background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 1rem 1.2rem; margin: 1rem 0; }
+.flaeche > :last-child { margin-bottom: 0; }
+
+.meldungen { list-style: none; padding: 0; margin: 0 0 1rem; }
+.meldung { padding: 0.6rem 0.9rem; border-radius: 4px; margin-bottom: 0.4rem; border-left: 4px solid var(--gruen); background: var(--gruen-hell); }
+.meldung.error { border-color: var(--rot); background: var(--rot-hell); }
+.meldung.warning { border-color: var(--orange-tief); background: var(--orange-hell); }
+
+.feld { margin-bottom: 1rem; }
+.feld label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
+.feld input { width: 100%; max-width: 26rem; font: inherit; padding: 0.55rem 0.7rem; border: 1px solid var(--linie); border-radius: 4px; }
+
+.knopf {
+  display: inline-block; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
+  background: var(--blau); color: var(--weiss); border: 2px solid var(--blau);
+  padding: 0.45rem 1rem; border-radius: 4px;
+}
+.knopf:hover { background: #0f2c52; color: var(--weiss); }
+.knopf.zweit { background: var(--weiss); color: var(--blau); }
+.knopf.zweit:hover { background: var(--blau-hell); }
+.aktionen { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.5rem 0 1.2rem; }
+
+.titelzeile { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1.5rem; }
+.jahre { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.jahre a { padding: 0.1rem 0.6rem; border-radius: 999px; text-decoration: none; border: 1px solid var(--linie); background: var(--weiss); }
+.jahre a[aria-current="page"] { background: var(--blau); color: var(--weiss); border-color: var(--blau); }
+
+/* Jahresübersicht */
+.tabelle-rahmen { overflow-x: auto; background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); }
+table.uebersicht { border-collapse: collapse; width: 100%; min-width: 46rem; }
+.uebersicht th, .uebersicht td { padding: 0.55rem 0.7rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--linie); }
+.uebersicht thead th { font-family: var(--schmal); font-weight: 600; font-size: 1.05rem; color: var(--grau); border-bottom: 2px solid var(--orange); }
+.uebersicht tfoot th, .uebersicht tfoot td { font-weight: 700; border-bottom: 0; border-top: 2px solid var(--blau); }
+.uebersicht .zahl { text-align: right; white-space: nowrap; }
+.uebersicht .zeitraum { white-space: nowrap; }
+.uebersicht tr.alternative td { color: var(--grau); font-style: italic; }
+.uebersicht tr.vorbei td { opacity: 0.7; }
+.marke-klein { font-size: 0.75rem; font-style: normal; background: var(--papier); border: 1px solid var(--linie); border-radius: 3px; padding: 0 0.3rem; margin-left: 0.3rem; }
+
+/* Reiseseite */
+.brotkrumen { margin: 0 0 0.3rem; font-size: 0.9rem; }
+.reisekopf { border-left: 8px solid var(--monat, var(--orange)); padding-left: 0.9rem; margin-bottom: 0.6rem; }
+.reisekopf h1 { margin-bottom: 0.2rem; }
+.zeitraum-gross { margin: 0; }
+.aktionen form { margin: 0; }
+.kennzahlen { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.6rem; margin: 0 0 1rem; }
+.kennzahlen div { background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 0.5rem 0.8rem; }
+.kennzahlen dt { font-size: 0.8rem; color: var(--grau); }
+.kennzahlen dd { margin: 0; font-family: var(--schmal); font-weight: 600; font-size: 1.6rem; line-height: 1.2; }
+.hinweise { list-style: none; padding: 0; margin: 0 0 1rem; }
+.hinweis { padding: 0.45rem 0.8rem; border-radius: 4px; margin-bottom: 0.35rem; border-left: 4px solid var(--gruen); background: var(--gruen-hell); }
+.hinweis.warnung { border-color: var(--orange-tief); background: var(--orange-hell); }
+.hinweis.fehler { border-color: var(--rot); background: var(--rot-hell); }
+table.liste { border-collapse: collapse; width: 100%; min-width: 44rem; }
+.liste th, .liste td { padding: 0.5rem 0.65rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--linie); }
+.liste thead th { font-family: var(--schmal); font-weight: 600; font-size: 1rem; color: var(--grau); border-bottom: 2px solid var(--orange); }
+.liste tfoot th, .liste tfoot td { font-weight: 700; border-top: 2px solid var(--blau); border-bottom: 0; }
+.liste .zahl { text-align: right; white-space: nowrap; }
+.nowrap { white-space: nowrap; }
+.liste tr.storniert td { text-decoration: line-through; color: var(--grau); }
+table.kosten { min-width: 0; max-width: 30rem; background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); }
+.kostenbalken { display: block; width: 100%; max-width: 30rem; height: 1.1rem; border-radius: 4px; margin-bottom: 0.6rem; }
+.farbpunkt { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 2px; margin-right: 0.45rem; vertical-align: -1px; }
+.status { font-size: 0.8rem; padding: 0.05rem 0.45rem; border-radius: 999px; background: var(--papier); border: 1px solid var(--linie); white-space: nowrap; }
+.status.bezahlt { background: var(--gruen-hell); border-color: #b7d8cf; }
+.status.angezahlt, .status.gebucht { background: var(--blau-hell); border-color: #c3d0e3; }
+.status.storniert { background: var(--rot-hell); }
+.links { padding-left: 1.2rem; } .links li { margin-bottom: 0.25rem; }
+.notizen { background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 0.8rem 1rem; }
+
+/* Demnächst */
+.demnaechst { background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 0.6rem 1rem 0.4rem; margin: 0 0 1.4rem; }
+.demnaechst h2 { margin: 0.2rem 0 0.4rem; font-size: 1.3rem; }
+.demnaechst ul { list-style: none; padding: 0; margin: 0 0 0.4rem; }
+.demnaechst li { display: flex; gap: 0.8rem; padding: 0.4rem 0 0.4rem 0.6rem; border-bottom: 1px solid var(--linie); border-left: 4px solid var(--blau); }
+.demnaechst li.rest { border-left-color: var(--orange-tief); }
+.demnaechst li.reise { border-left-color: var(--orange); }
+.demnaechst li.dringend { border-left-color: var(--rot); background: var(--rot-hell); }
+.demnaechst .wann { flex: none; width: 4.6rem; font-variant-numeric: tabular-nums; color: var(--grau); }
+
+/* Karte */
+.karte { height: 26rem; border: 1px solid var(--linie); border-radius: var(--r); background: #e8e4da; z-index: 0; }
+@media (max-width: 40rem) { .karte { height: 19rem; } }
+.karte-legende { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; margin-top: 0.4rem; }
+.farbpunkt.rund { border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--linie); }
+
+.fuss-seite { max-width: var(--mass); margin: 0 auto; padding: 0 1rem 2rem; font-size: 0.85rem; color: var(--grau); }
+.fuss-seite a { color: var(--grau); }
+.datenschutz h2 { font-size: 1.25rem; margin-top: 1.6rem; }
+.datenschutz li { margin-bottom: 0.3rem; max-width: 42rem; }

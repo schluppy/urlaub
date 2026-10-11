@@ -1,0 +1,24 @@
+{% extends "portal/base.html" %}
+{% load static %}
+{% block titel %}{{ reise.titel }}{% endblock %}
+{% block kopf %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
+<script src="{% static 'reisen/karte.js' %}" defer></script>{% endblock %}
+{% block inhalt %}
+<p class="brotkrumen"><a href="{% url 'portal:jahr' reise.jahr %}">Reisen {{ reise.jahr }}</a></p>
+<div class="reisekopf" style="--monat: {{ farbe }}">
+  <h1>{{ reise.titel }}{% if not reise.im_kalender %} <span class="marke-klein">Alternative</span>{% endif %}</h1>
+  <p class="zeitraum-gross">Urlaub {{ reise.urlaub_beginn|date:"l, d.m.Y" }} – {{ reise.urlaub_ende|date:"l, d.m.Y" }}
+    {% if reise.hat_eigenen_urlaub %}<br><span class="leise">unterwegs {{ reise.von|date:"D d.m." }} – {{ reise.bis|date:"D d.m.Y" }}{% if reise.abfahrt_feierabend %} · Abfahrt {{ reise.abfahrt_feierabend|date:"l" }} nach Feierabend{% endif %}</span>{% endif %}
+    {% if reise.fahrzeugprofil %}<br><span class="leise">mit {{ reise.fahrzeugprofil }}{% if reise.vignetten_meiden %} · Vignettenstraßen meiden: {{ reise.vignetten_meiden }}{% endif %}</span>{% endif %}</p>
+</div>
+
+<div class="aktionen">
+  <a class="knopf" href="{% url 'admin:reisen_reise_change' reise.pk %}">Bearbeiten</a>
+  {% if etappen %}<form method="post" action="{% url 'reisen:route' reise.pk %}">{% csrf_token %}<button class="knopf zweit" type="submit">Route aktualisieren</button></form>{% endif %}
+  <a class="knopf zweit" href="{% url 'reisen:excel' reise.pk %}">Excel</a>
+  <a class="knopf zweit" href="{% url 'reisen:pdf' reise.pk %}">PDF</a>
+</div>
+
+{% include "reisen/_inhalt.html" %}
+{% endblock %}

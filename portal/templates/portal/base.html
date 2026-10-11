@@ -1,0 +1,39 @@
+{% load static %}<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173F73">
+  <title>{% block titel %}Urlaubsplaner{% endblock %} – Urlaubsplaner</title>
+  <link rel="stylesheet" href="{% static 'portal/portal.css' %}">
+  <link rel="icon" href="{% static 'portal/wohnwagen.svg' %}">
+  {% block kopf %}{% endblock %}
+</head>
+<body class="{% block body_klasse %}{% endblock %}">
+<header class="kopf">
+  <div class="kopf-innen">
+    <a class="marke" href="{% url 'portal:start' %}">
+      <img src="{% static 'portal/wohnwagen.svg' %}" alt="" width="40" height="28">
+      <span>Urlaubsplaner</span>
+    </a>
+    {% if user.is_authenticated %}
+    <nav class="haupt" aria-label="Hauptnavigation">
+      {% with app=request.resolver_match.app_name %}
+      <a href="{% url 'portal:start' %}" {% if app == 'portal' or app == 'reisen' %}aria-current="page"{% endif %}>Reisen</a>
+      <a href="{% url 'kalender:start' %}" {% if app == 'kalender' %}aria-current="page"{% endif %}>Kalender</a>
+      <a href="{% url 'admin:index' %}">Bearbeiten</a>
+      {% endwith %}
+      <form method="post" action="{% url 'portal:abmelden' %}">{% csrf_token %}<button type="submit">Abmelden</button></form>
+    </nav>
+    {% endif %}
+  </div>
+</header>
+<main>
+  {% if messages %}
+  <ul class="meldungen">{% for m in messages %}<li class="meldung {{ m.tags }}">{{ m }}</li>{% endfor %}</ul>
+  {% endif %}
+  {% block inhalt %}{% endblock %}
+</main>
+<footer class="fuss-seite"><a href="{% url 'portal:datenschutz' %}">Datenschutz</a></footer>
+</body>
+</html>

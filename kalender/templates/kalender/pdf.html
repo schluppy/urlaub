@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Urlaubskalender {{ jahr }}</title>
+<style>
+@font-face { font-family: "Barlow Condensed"; src: url("{{ schriften }}/BarlowCondensed-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Barlow Condensed"; src: url("{{ schriften }}/BarlowCondensed-SemiBold.ttf"); font-weight: 600; }
+@font-face { font-family: "Barlow Condensed"; src: url("{{ schriften }}/BarlowCondensed-Bold.ttf"); font-weight: 700; }
+@page { size: A4 landscape; margin: 6mm 7mm; }
+body { margin: 0; color: #1C2430; }
+{% include "kalender/_kalender.css" %}
+/* A4 quer: Maße gegenüber der Bildschirmfassung verkleinert, damit alles auf eine Seite passt */
+.kalender h1 { font-size: 15pt; margin-bottom: 1.2mm; }
+.raster { border-spacing: 0.25mm; }
+.raster th { font-size: 7.5pt; height: 4.2mm; padding: 0.3mm 1mm; }
+.raster td { font-size: 6.5pt; height: {{ zeilenhoehe|stringformat:".2f" }}mm; padding: 0 0.7mm 0 0.4mm; border-left-width: 0.7mm; }
+.fuss { font-size: 6.8pt; }
+.fuss p { margin: 0.7mm 0; }
+.legende span { margin-right: 3.5mm; }
+.legende i { width: 4.5mm; height: 2.4mm; margin-right: 1mm; }
+.legende i.ferienbalken { border-left-width: 0.8mm; }
+</style>
+</head>
+<body class="kalender">
+<h1>Urlaubskalender {{ jahr }}</h1>
+{% include "kalender/_raster.html" %}
+{% include "kalender/_fuss.html" %}
+</body>
+</html>

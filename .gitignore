@@ -1,0 +1,16 @@
+.env
+msmtprc
+msmtp.env
+db.sqlite3
+media/
+staticfiles/
+__pycache__/
+import/*.ods
+import/*.xlsx
+erinnerungen.log
+
+# Private Daten einer Installation – bleiben nur auf dem Server
+kalender/management/commands/startdaten_privat.py
+reisen/management/commands/import_2026.py
+tests/test_import.py
+BETRIEB-LOKAL.md

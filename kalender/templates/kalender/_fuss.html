@@ -1,0 +1,17 @@
+<div class="fuss">
+  <p class="legende">
+    <span><i style="background:{{ farben.wochentag }}"></i>Wochentag</span>
+    <span><i style="background:{{ farben.wochenende }}"></i>Wochenende</span>
+    <span><i style="background:{{ farben.feiertag }}"></i>Gesetzlicher Feiertag</span>
+    <span><i class="ferienbalken" style="background:{{ farben.wochentag }};border-left-color:{{ farben.ferien }}"></i>Schulferien {{ bundesland }}</span>
+    <span><i style="background:{{ farben.urlaub }}"></i>Urlaub</span>
+    <span><i style="background:{{ farben.urlaub_we }}"></i>Wochenende im Urlaub</span>
+    <span><i style="background:linear-gradient(to bottom right, {{ farben.wochentag }} 50%, {{ farben.urlaub }} 50%)"></i>Abfahrt nach Feierabend</span>
+  </p>
+  {% if ferien %}<p><b>Schulferien {{ bundesland_name }}:</b>
+    {% for f in ferien %}{{ f.bezeichnung }} {{ f.zeitraum }}{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+  <p><b>Geplanter Urlaub:</b>
+    {% for u in urlaube %}{{ u.zeitraum }} {{ u.titel }} ({% if u.urlaubstage %}{{ u.urlaubstage }} Urlaubstag{{ u.urlaubstage|pluralize:"e" }}{% else %}kein Urlaubstag{% endif %}){% if not forloop.last %} · {% endif %}{% empty %}noch keiner{% endfor %}
+    {% if urlaube %} · <b>Summe {{ urlaubstage_summe }} Urlaubstag{{ urlaubstage_summe|pluralize:"e" }}</b>{% endif %}</p>
+  <p class="quelle">Ferientermine: {{ ferien_quelle }} · Feiertage: gesetzliche Feiertage {{ bundesland_name }} · Angaben ohne Gewähr</p>
+</div>

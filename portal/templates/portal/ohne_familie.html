@@ -1,0 +1,8 @@
+{% extends "portal/base.html" %}
+{% block titel %}Keine Familie{% endblock %}
+{% block inhalt %}
+<h1>Noch keiner Familie zugeordnet</h1>
+<p>Dein Zugang ist eingerichtet, gehört aber noch zu keiner Familie. Reisen, Orte und der Kalender
+erscheinen, sobald dich die Verwaltung einer Familie zuordnet.</p>
+{% if user.is_superuser %}<p><a class="knopf" href="{% url 'admin:konten_familie_changelist' %}">Familien verwalten</a></p>{% endif %}
+{% endblock %}

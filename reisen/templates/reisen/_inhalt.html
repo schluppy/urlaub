@@ -1,0 +1,108 @@
+{% load urlaub %}
+<dl class="kennzahlen">
+  <div><dt>Urlaubstage</dt><dd>{% if reise.urlaubstage %}{{ reise.urlaubstage }}{% else %}keiner{% endif %}</dd></div>
+  <div><dt>Entfernung</dt><dd>{{ reise.entfernung_km|km }}</dd></div>
+  <div><dt>Fahrzeit</dt><dd>{{ reise.fahrzeit|dauer }}</dd></div>
+  <div><dt>Nächte</dt><dd>{{ reise.naechte|default:"–" }}</dd></div>
+  <div><dt>Kosten</dt><dd>{{ reise.gesamtkosten|euro }}</dd></div>
+  {% if reise.offen_eur %}<div><dt>noch offen</dt><dd>{{ reise.offen_eur|euro }}</dd></div>{% endif %}
+</dl>
+
+{% if hinweise %}
+<ul class="hinweise">{% for stufe, text in hinweise %}<li class="hinweis {{ stufe }}">{{ text }}</li>{% endfor %}</ul>
+{% endif %}
+
+{% if not pdf and karte.orte %}
+<h2>Karte</h2>
+<div id="karte" class="karte" data-tomtom="{% url 'reisen:kachel' 0 0 0 %}" role="region" aria-label="Karte der Reise"></div>
+<p class="klein leise karte-legende">
+  <span><i class="farbpunkt rund" style="background:#173F73"></i>Zuhause</span>
+  <span><i class="farbpunkt rund" style="background:#E39226"></i>Campingplatz</span>
+  <span><i class="farbpunkt rund" style="background:#1F6F8B"></i>Fährterminal</span>
+  {% if karte.strecken %}<span>gestrichelt: Luftlinie, Route noch nicht berechnet</span>{% endif %}
+</p>
+{{ karte|json_script:"kartendaten" }}
+{% endif %}
+
+<h2>Etappen</h2>
+{% if etappen %}
+<div class="tabelle-rahmen">
+<table class="liste">
+  <thead><tr><th>Datum</th><th>Strecke</th><th class="zahl">Start</th><th class="zahl">Fahrzeit</th>
+    <th class="zahl">Pause</th><th class="zahl">Ankunft</th><th class="zahl">Entfernung</th><th>Unterwegs</th></tr></thead>
+  <tbody>
+  {% for e in etappen %}
+  <tr>
+    <td class="nowrap">{{ e.datum|date:"D d.m." }}</td>
+    <td>{{ e.von_ort }} → {{ e.nach_ort }}
+      {% if not pdf and e.karten_link %}<a class="klein" href="{{ e.karten_link }}" target="_blank" rel="noopener">Karte</a>{% endif %}
+      {% if e.fahrzeugprofil %}<br><span class="leise klein">mit {{ e.fahrzeugprofil }}</span>{% endif %}</td>
+    <td class="zahl">{{ e.startzeit|time:"H:i"|default:"–" }}</td>
+    <td class="zahl">{{ e.fahrzeit|dauer }}</td>
+    <td class="zahl">{% if e.pause %}{{ e.pause|dauer }}{% else %}–{% endif %}</td>
+    <td class="zahl">{% if e.ankunft %}{% if e.ankunft.date != e.datum %}{{ e.ankunft|date:"d.m." }} {% endif %}{{ e.ankunft|time:"H:i" }}{% else %}–{% endif %}</td>
+    <td class="zahl">{{ e.entfernung_km|km }}</td>
+    <td class="klein">{% with d=e.routing_details %}{% if d.laender %}{{ d.laender|join:" → " }}{% endif %}{% if d.vignetten %}<br><b>Vignette {{ d.vignetten|join:", " }}</b>{% endif %}{% if d.faehre %}<br>Fähre{% endif %}{% endwith %}
+      {% if e.routing_stand %}<br><span class="leise">TomTom {{ e.routing_stand|date:"d.m.y" }}</span>{% endif %}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><th colspan="3">Summe</th><td class="zahl">{{ reise.fahrzeit|dauer }}</td><td></td><td></td>
+    <td class="zahl">{{ reise.entfernung_km|km }}</td><td></td></tr></tfoot>
+</table>
+</div>
+{% else %}<p class="leise">Noch keine Etappen.</p>{% endif %}
+
+<h2>Übernachtungen</h2>
+{% if buchungen %}
+<div class="tabelle-rahmen">
+<table class="liste">
+  <thead><tr><th>Platz</th><th>Zeitraum</th><th class="zahl">Nächte</th><th class="zahl">Preis/Nacht</th>
+    <th class="zahl">Summe</th><th class="zahl">Anzahlung</th><th class="zahl">Rest</th><th>Status</th></tr></thead>
+  <tbody>
+  {% for b in buchungen %}
+  <tr class="{% if b.status == 'storniert' %}storniert{% endif %}">
+    <td>{% if b.ort.website and not pdf %}<a href="{{ b.ort.website }}" target="_blank" rel="noopener">{{ b.ort }}</a>{% else %}{{ b.ort }}{% endif %}
+      {% if b.buchungsnummer %}<br><span class="leise klein">Nr. {{ b.buchungsnummer }}</span>{% endif %}</td>
+    <td class="nowrap">{{ b.von|date:"D d.m." }} – {{ b.bis|date:"D d.m." }}</td>
+    <td class="zahl">{{ b.naechte }}</td>
+    <td class="zahl">{% if b.ist_pauschal %}pauschal{% if b.preis_je_nacht is not None %}<br><span class="leise klein">≈ {{ b.preis_je_nacht|zahl:2 }} {% if b.ist_fremdwaehrung %}{{ b.waehrung }}{% else %}€{% endif %}/Nacht</span>{% endif %}{% elif b.preis_pro_nacht is None %}–{% elif b.ist_fremdwaehrung %}{{ b.preis_pro_nacht|zahl:2 }} {{ b.waehrung }}{% else %}{{ b.preis_pro_nacht|euro }}{% endif %}</td>
+    <td class="zahl">{{ b.summe_eur|euro }}{% if b.ist_fremdwaehrung %}<br><span class="leise klein">{{ b.summe|zahl:2 }} {{ b.waehrung }}</span>{% endif %}</td>
+    <td class="zahl">{% if b.anzahlung %}{% if b.ist_fremdwaehrung %}{{ b.anzahlung|zahl:2 }} {{ b.waehrung }}{% else %}{{ b.anzahlung|euro }}{% endif %}{% else %}–{% endif %}</td>
+    <td class="zahl">{% if b.status == 'bezahlt' %}–{% else %}{{ b.rest_eur|euro }}{% if b.rest_faellig_am %}<br><span class="leise klein">bis {{ b.rest_faellig_am|date:"d.m.Y" }}</span>{% endif %}{% endif %}</td>
+    <td><span class="status {{ b.status }}">{{ b.get_status_display }}</span></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr><th colspan="2">Summe</th><td class="zahl">{{ reise.naechte }}</td><td></td>
+    <td class="zahl">{{ reise.buchungen_eur|euro }}</td><td></td><td class="zahl">{{ reise.offen_eur|euro }}</td><td></td></tr></tfoot>
+</table>
+</div>
+{% else %}<p class="leise">Noch keine Buchungen.</p>{% endif %}
+
+<h2>Kosten</h2>
+{% if balken %}
+<svg class="kostenbalken" viewBox="0 0 100 6" preserveAspectRatio="none" role="img" aria-label="Kostenanteile">
+  {% for b in balken %}<rect x="{{ b.x|stringformat:'.3f' }}" y="0" width="{{ b.breite|stringformat:'.3f' }}" height="6" fill="{{ b.farbe }}"><title>{{ b.name }} {{ b.betrag|euro }}</title></rect>{% endfor %}
+</svg>
+{% endif %}
+<table class="liste kosten">
+  <tbody>
+  {% for b in balken %}
+  <tr><td><i class="farbpunkt" style="background:{{ b.farbe }}"></i>{{ b.name }}</td><td class="zahl">{{ b.betrag|euro }}</td><td class="zahl leise">{{ b.anteil }} %</td></tr>
+  {% endfor %}
+  {% if reise.verbrauch %}<tr><td colspan="3" class="leise klein">Diesel: {{ reise.dieselliter|zahl:0 }} L ({{ reise.verbrauch|zahl:1 }} L/100 km) × {{ reise.dieselpreis|zahl:3 }} €/L</td></tr>{% endif %}
+  {% for k in kosten %}{% if k.notiz %}<tr><td colspan="3" class="leise klein">{{ k.get_art_display }}: {{ k.notiz }} ({{ k.betrag|euro }})</td></tr>{% endif %}{% endfor %}
+  </tbody>
+  <tfoot><tr><th>Gesamt</th><td class="zahl">{{ reise.gesamtkosten|euro }}</td><td></td></tr></tfoot>
+</table>
+
+{% if links %}
+<h2>Links</h2>
+<ul class="links">{% for l in links %}<li>{% if pdf %}{{ l.titel }}: <span class="klein">{{ l.url }}</span>{% else %}<a href="{{ l.url }}" target="_blank" rel="noopener">{{ l.titel }}</a>{% endif %}</li>{% endfor %}</ul>
+{% endif %}
+
+{% if reise.notizen %}
+<h2>Notizen</h2>
+<p class="notizen">{{ reise.notizen|linebreaksbr }}</p>
+{% endif %}

@@ -1,0 +1,30 @@
+{% extends "portal/base.html" %}
+{% block titel %}Kalender {{ jahr }}{% endblock %}
+{% block kopf %}<style>
+{% include "kalender/_kalender.css" %}
+main { max-width: none; }
+.kalender-rahmen { overflow-x: auto; background: #fff; border: 1px solid var(--linie); border-radius: var(--r); padding: 0.6rem; }
+.raster { min-width: 1150px; }
+.raster th { font-size: 0.95rem; padding: 0.25rem 0.4rem; }
+.raster td { font-size: 0.8rem; height: 1.45rem; border-left-width: 4px; }
+.fuss { font-size: 1rem; margin-top: 0.8rem; }
+.legende i { width: 1.6rem; height: 0.9rem; }
+.legende i.ferienbalken { border-left-width: 4px; }
+</style>{% endblock %}
+{% block inhalt %}
+<div class="kalender">
+<div class="titelzeile">
+  <h1>Urlaubskalender {{ jahr }}</h1>
+  <nav class="jahre" aria-label="Jahr wählen">
+    {% for j in jahre %}<a href="{% url 'kalender:jahr' j %}" {% if j == jahr %}aria-current="page"{% endif %}>{{ j }}</a>{% endfor %}
+  </nav>
+</div>
+<div class="aktionen">
+  <a class="knopf" href="{% url 'kalender:pdf' jahr %}">PDF</a>
+  <a class="knopf zweit" href="{% url 'portal:jahr' jahr %}">Reisen {{ jahr }}</a>
+  {% if user.is_superuser %}<a class="knopf zweit" href="{% url 'admin:kalender_schulferien_changelist' %}">Schulferien pflegen</a>{% endif %}
+</div>
+<div class="kalender-rahmen">{% include "kalender/_raster.html" %}</div>
+{% include "kalender/_fuss.html" %}
+</div>
+{% endblock %}

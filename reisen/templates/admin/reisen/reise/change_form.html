@@ -1,0 +1,16 @@
+{% extends "admin/change_form.html" %}
+{% block object-tools-items %}
+  {% if original.pk %}
+  <li>
+    <form method="post" action="{% url 'admin:reisen_reise_route' original.pk %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" class="button" style="padding:4px 12px;border-radius:15px;background:#173F73;color:#fff;border:0;cursor:pointer;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Route aktualisieren</button>
+    </form>
+  </li>
+  {% endif %}
+  {{ block.super }}
+{% endblock %}
+{% block admin_change_form_document_ready %}
+  {{ block.super }}
+  {{ aufenthalte|json_script:"aufenthalte" }}
+{% endblock %}

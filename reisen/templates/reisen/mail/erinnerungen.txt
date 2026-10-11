@@ -1,0 +1,11 @@
+{% autoescape off %}Hallo {{ person.name }},
+
+{% if punkte|length == 1 %}eine Erinnerung{% else %}{{ punkte|length }} Erinnerungen{% endif %} aus dem Urlaubsplaner:
+{% for p in punkte %}
+{% if p.dringend %}❗ {% endif %}{{ p.titel }}
+{% for z in p.zeilen %}   {{ z }}
+{% endfor %}{% if p.link %}   {{ p.link }}
+{% endif %}{% endfor %}
+Restzahlungen erledigt? In der Buchung den Status auf „bezahlt“ setzen, dann kommt keine weitere Erinnerung.
+Eigene Erinnerungen: {{ verwaltung }}
+{% endautoescape %}

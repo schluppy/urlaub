@@ -1,0 +1,69 @@
+{% extends "portal/base.html" %}
+{% load urlaub %}
+{% block titel %}Reisen {{ jahr }}{% endblock %}
+{% block inhalt %}
+<div class="titelzeile">
+  <h1>Reisen {{ jahr }}</h1>
+  <nav class="jahre" aria-label="Jahr wählen">
+    {% for j in jahre %}<a href="{% url 'portal:jahr' j %}" {% if j == jahr %}aria-current="page"{% endif %}>{{ j }}</a>{% endfor %}
+  </nav>
+</div>
+
+<div class="aktionen">
+  <a class="knopf" href="{% url 'admin:reisen_reise_add' %}">Neue Reise</a>
+  <a class="knopf zweit" href="{% url 'kalender:jahr' jahr %}">Kalender {{ jahr }}</a>
+  <a class="knopf zweit" href="{% url 'kalender:pdf' jahr %}">Kalender als PDF</a>
+</div>
+
+{% if anstehend %}
+<section class="demnaechst" aria-labelledby="demnaechst">
+  <h2 id="demnaechst">Demnächst</h2>
+  <ul>
+  {% for p in anstehend %}
+    <li class="{{ p.art }}{% if p.dringend %} dringend{% endif %}">
+      <span class="wann">{{ p.datum|date:"D d.m." }}</span>
+      <span class="was">{% if p.reise %}<a href="{% url 'reisen:reise' p.reise.pk %}">{{ p.titel }}</a>{% else %}{{ p.titel }}{% endif %}
+        {% if p.art == "rest" %}<br><span class="leise klein">{{ p.zeilen.0 }}</span>{% elif p.art == "erinnerung" and p.reise %}<br><span class="leise klein">{{ p.reise.titel }}</span>{% endif %}</span>
+    </li>
+  {% endfor %}
+  </ul>
+  <p class="klein leise">Erinnerungen kommen zusätzlich per Mail. <a href="{% url 'admin:reisen_erinnerung_add' %}">Erinnerung anlegen</a></p>
+</section>
+{% endif %}
+
+{% if reisen %}
+<div class="tabelle-rahmen">
+<table class="uebersicht">
+  <thead><tr>
+    <th>Zeitraum</th><th>Reise</th><th class="zahl">Urlaubstage</th><th class="zahl">Entfernung</th>
+    <th class="zahl">Nächte</th><th class="zahl">Kosten</th><th>Ziel(e)</th>
+  </tr></thead>
+  <tbody>
+  {% for r in reisen %}
+  <tr class="{% if not r.im_kalender %}alternative{% endif %}{% if r.bis < heute %} vorbei{% endif %}">
+    <td class="zeitraum">{{ r.urlaub_beginn|date:"D d.m." }} – {{ r.urlaub_ende|date:"D d.m." }}
+      {% if r.hat_eigenen_urlaub %}<br><span class="leise klein">unterwegs {{ r.von|date:"D d.m." }} – {{ r.bis|date:"D d.m." }}{% if r.abfahrt_feierabend %}, Abfahrt nach Feierabend{% endif %}</span>{% endif %}</td>
+    <td><a href="{% url 'reisen:reise' r.pk %}">{{ r.titel }}</a>
+      {% if not r.im_kalender %}<span class="marke-klein">Alternative</span>{% endif %}</td>
+    <td class="zahl">{% if r.urlaubstage %}{{ r.urlaubstage }}{% else %}<span class="leise">–</span>{% endif %}</td>
+    <td class="zahl">{{ r.entfernung_km|km }}</td>
+    <td class="zahl">{{ r.naechte|default:"–" }}</td>
+    <td class="zahl">{{ r.gesamtkosten|euro }}{% if r.offen_eur %}<br><span class="leise klein">offen {{ r.offen_eur|euro }}</span>{% endif %}</td>
+    <td>{{ r.ziele|join:", "|default:"–" }}</td>
+  </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot><tr>
+    <th colspan="2">Summe{% if reisen|length > 1 %} (ohne Alternativen){% endif %}</th>
+    <td class="zahl">{{ summen.urlaubstage }}</td>
+    <td class="zahl">{{ summen.entfernung|km }}</td>
+    <td class="zahl">{{ summen.naechte }}</td>
+    <td class="zahl">{{ summen.kosten|euro }}{% if summen.offen %}<br><span class="leise klein">offen {{ summen.offen|euro }}</span>{% endif %}</td>
+    <td></td>
+  </tr></tfoot>
+</table>
+</div>
+{% else %}
+<p class="flaeche">Für {{ jahr }} ist noch keine Reise angelegt.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,45 @@
+{% extends "portal/base.html" %}
+{% block titel %}Datenschutz{% endblock %}
+{% block inhalt %}
+<div class="datenschutz">
+<h1>Datenschutzhinweis</h1>
+<p>Der Urlaubsplaner ist ein privates Angebot für einige befreundete Familien. Er hat keine Werbung,
+keine Statistik und keine Tracker.</p>
+
+<h2>Verantwortlich</h2>
+<p>{% if betreiber %}{{ betreiber }}{% else %}<em>[Name des Betreibers – BETREIBER_NAME in .env]</em>{% endif %}<br>
+{% if kontakt %}<a href="mailto:{{ kontakt }}">{{ kontakt }}</a>{% else %}<em>[Kontakt – BETREIBER_EMAIL in .env]</em>{% endif %}</p>
+
+<h2>Welche Daten gespeichert werden</h2>
+<ul>
+  <li><b>Zugang:</b> Name, E-Mail-Adresse, Zugehörigkeit zu einer Familie. Beim Anfordern eines
+      Anmeldelinks die IP-Adresse (zum Schutz vor Missbrauch).</li>
+  <li><b>Reiseplanung:</b> was ihr eintragt – Reisen, Urlaubszeiten, Etappen, Orte (auch die
+      Adresse von Zuhause), Buchungen, Kosten, Links, Fahrzeugmaße, Erinnerungen.</li>
+  <li><b>Cookies:</b> nur ein Sitzungs-Cookie für die Anmeldung und ein Schutz-Cookie für Formulare.
+      Die Auswahl der Grundkarte merkt sich der Browser lokal.</li>
+</ul>
+<p>Jede Familie sieht nur ihre eigenen Daten. Der Betreiber verwaltet Familien und Zugänge,
+sieht in der Anwendung aber keine Reisen anderer Familien. Technisch hat er als Betreiber
+des Servers Zugriff auf die Datenbank.</p>
+
+<h2>Weitergabe an Dienste</h2>
+<ul>
+  <li><b>TomTom</b> (TomTom International B.V., Niederlande): Adressen und Koordinaten der Orte, Datum
+      und Uhrzeit der Etappen sowie die Fahrzeugmaße werden für Geocoding und Routing übermittelt;
+      Kartenkacheln der Grundkarte „TomTom“ holt der Server ab. Namen oder E-Mail-Adressen gehen nicht an TomTom.</li>
+  <li><b>OpenStreetMap</b> (OpenStreetMap Foundation, Vereinigtes Königreich): Bei der Grundkarte
+      „OpenStreetMap“ lädt dein Browser die Kartenkacheln direkt dort; dabei wird deine IP-Adresse übertragen.</li>
+  <li><b>E-Mail-Versand</b> von Anmeldelinks und Erinnerungen über den Mailserver des Betreibers.</li>
+</ul>
+
+<h2>Speicherdauer</h2>
+<p>Daten bleiben gespeichert, bis ihr sie löscht oder um Löschung bittet. Anmeldelinks gelten 15 Minuten.
+Tägliche Sicherungen der Datenbank werden nach 30 Tagen gelöscht.</p>
+
+<h2>Eure Rechte</h2>
+<p>Ihr könnt jederzeit Auskunft über eure gespeicherten Daten, Berichtigung oder Löschung verlangen –
+eine kurze Nachricht an den Betreiber genügt. Außerdem besteht ein Beschwerderecht bei einer
+Datenschutz-Aufsichtsbehörde.</p>
+</div>
+{% endblock %}
