@@ -7,6 +7,7 @@ from django.shortcuts import redirect, render
 from django.template.loader import render_to_string
 
 from portal.views import reisen_im_jahr
+from reisen.dokumente import stand_jetzt, stempel
 
 from .kalender import jahreskalender
 
@@ -55,23 +56,28 @@ def _zeilenhoehe(kontext):
     return round(ZEILENHOEHE_MM - extra * FUSSZEILE_MM / 31, 2)
 
 
-def kalender_dokument(familie, jahr):
-    """Gesetztes Dokument (WeasyPrint) – eine Seite A4 quer."""
+def kalender_dateiname(jahr, stand):
+    return f"Urlaubskalender_{jahr}_{stempel(stand)}.pdf"
+
+
+def kalender_dokument(familie, jahr, stand=None):
+    """Gesetztes Dokument (WeasyPrint) – eine Seite A4 quer, mit Zeitstempel in der Fußzeile."""
     from weasyprint import HTML
 
     kontext = _kontext(familie, jahr)
     html = render_to_string("kalender/pdf.html", {
-        **kontext, "zeilenhoehe": _zeilenhoehe(kontext),
+        **kontext, "zeilenhoehe": _zeilenhoehe(kontext), "stand": stand or stand_jetzt(),
         "schriften": (settings.BASE_DIR / "static" / "fonts").as_uri()})
     return HTML(string=html, base_url=str(settings.BASE_DIR)).render()
 
 
-def pdf_erzeugen(familie, jahr):
-    return kalender_dokument(familie, jahr).write_pdf()
+def pdf_erzeugen(familie, jahr, stand=None):
+    return kalender_dokument(familie, jahr, stand).write_pdf()
 
 
 @login_required
 def pdf(request, jahr):
-    antwort = HttpResponse(pdf_erzeugen(_familie(request), jahr), content_type="application/pdf")
-    antwort["Content-Disposition"] = f'inline; filename="Urlaubskalender_{jahr}.pdf"'
+    stand = stand_jetzt()
+    antwort = HttpResponse(pdf_erzeugen(_familie(request), jahr, stand), content_type="application/pdf")
+    antwort["Content-Disposition"] = f'inline; filename="{kalender_dateiname(jahr, stand)}"'
     return antwort

@@ -8,14 +8,16 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from kalender.views import _kontext as kalender_kontext
-from kalender.views import kalender_dokument
+from kalender.views import kalender_dateiname, kalender_dokument
 from reisen import dokumente
+from reisen.dokumente import stand_jetzt
 from reisen.models import Reise
 from reisen.views import _kontext as reise_kontext
 from reisen.views import kartendaten
 
 from .forms import FreigabeForm
-from .models import MAX_TAGE, Art, Freigabe
+from .ical import kalender as ical_kalender
+from .models import MAX_TAGE, Art, Freigabe, Kalenderabo
 
 
 def _familie(request):
@@ -118,7 +120,41 @@ def kalender_pdf(request, token):
     if not freigabe.aktiv:
         return _oeffentlich(render(request, "freigaben/abgelaufen.html", {"beendet": bool(freigabe.beendet_am),
                                                                      "bis": freigabe.gueltig_bis}, status=410))
-    antwort = HttpResponse(kalender_dokument(freigabe.familie, freigabe.jahr).write_pdf(),
+    stand = stand_jetzt()
+    antwort = HttpResponse(kalender_dokument(freigabe.familie, freigabe.jahr, stand).write_pdf(),
                            content_type="application/pdf")
-    antwort["Content-Disposition"] = f'inline; filename="Urlaubskalender_{freigabe.jahr}.pdf"'
+    antwort["Content-Disposition"] = f'inline; filename="{kalender_dateiname(freigabe.jahr, stand)}"'
     return _oeffentlich(antwort)
+
+
+# --- Kalender-Abo (iCal, z. B. Google Kalender) --------------------------------
+
+
+@login_required
+def abo(request):
+    """Eigenen Abo-Link anzeigen, neu erzeugen oder beenden (je Person höchstens ein aktiver Link)."""
+    _familie(request)
+    aktiv = request.user.kalenderabos.filter(beendet_am__isnull=True).first()
+    if request.method == "POST":
+        if aktiv:
+            aktiv.beenden()
+        if request.POST.get("aktion") == "erzeugen":
+            Kalenderabo.objects.create(person=request.user)
+            messages.success(request, "Neuer Abo-Link erstellt." + (" Der bisherige funktioniert nicht mehr." if aktiv else ""))
+        else:
+            messages.success(request, "Der Abo-Link funktioniert nicht mehr. Abonnierte Kalender zeigen keine neuen Daten.")
+        return redirect("freigaben:abo")
+    return render(request, "freigaben/abo.html", {"abo": aktiv})
+
+
+def abo_feed(request, token):
+    """Die Kalenderdatei – ohne Anmeldung, nur mit gültigem, geheimem Link."""
+    abo = Kalenderabo.objects.select_related("person__familie").filter(token=token).first()
+    if abo is None or not abo.aktiv:
+        raise Http404
+    abo.abgerufen()
+    antwort = HttpResponse(ical_kalender(abo.person.familie), content_type="text/calendar; charset=utf-8")
+    antwort["Content-Disposition"] = 'inline; filename="urlaube.ics"'
+    antwort["X-Robots-Tag"] = "noindex, nofollow"
+    antwort["Cache-Control"] = "private, max-age=3600"
+    return antwort

@@ -189,6 +189,21 @@ class Reise(models.Model):
                 ergebnis.append((ort, etappe.datum, abfahrt))
         return ergebnis
 
+    @property
+    def hauptort(self):
+        """Haupturlaubsort: Platz mit den meisten Nächten – ohne Zwischenübernachtungen, Fähren und Zuhause.
+        Zuerst aus den Buchungen, sonst aus den Aufenthalten laut Etappen; bei Gleichstand der erste."""
+        nebensaechlich = {Ortstyp.ZUHAUSE, Ortstyp.ZWISCHEN, Ortstyp.FAEHRE}
+        naechte = {}
+        for b in sorted(self._buchungen(), key=lambda b: b.von):
+            if b.ort.typ not in nebensaechlich:
+                naechte[b.ort] = naechte.get(b.ort, 0) + b.naechte
+        if not naechte:
+            for ort, an, ab in self.aufenthalte():
+                if ort.typ not in nebensaechlich:
+                    naechte[ort] = naechte.get(ort, 0) + (ab - an).days
+        return max(naechte, key=naechte.get) if naechte else None   # max nimmt bei Gleichstand den ersten
+
     def kostenaufstellung(self):
         """[(Bezeichnung, Betrag €)] – Diesel, Übernachtungen, dann je Kostenart."""
         posten = [("Diesel", self.dieselkosten), ("Übernachtungen", self.buchungen_eur)]

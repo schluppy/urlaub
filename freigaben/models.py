@@ -20,6 +20,10 @@ def neuer_token():
     return secrets.token_urlsafe(16)
 
 
+def abo_token():
+    return secrets.token_urlsafe(24)
+
+
 class Art(models.TextChoices):
     REISE = "reise", "Reise"
     KALENDER = "kalender", "Kalender"
@@ -83,6 +87,46 @@ class Freigabe(models.Model):
 
     def aufgerufen(self):
         Freigabe.objects.filter(pk=self.pk).update(aufrufe=models.F("aufrufe") + 1, zuletzt_am=timezone.now())
+
+    def beenden(self):
+        if self.beendet_am is None:
+            self.beendet_am = timezone.now()
+            self.save(update_fields=["beendet_am"])
+
+
+class Kalenderabo(models.Model):
+    """Geheimer Link für ein Kalender-Abonnement (iCal), z. B. in Google Kalender.
+    Je Person höchstens ein aktiver Link; er zeigt die Urlaube ihrer Familie."""
+
+    person = models.ForeignKey("konten.Person", on_delete=models.CASCADE, related_name="kalenderabos")
+    token = models.CharField(max_length=60, unique=True, default=abo_token, editable=False)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    beendet_am = models.DateTimeField("beendet am", null=True, blank=True)
+    abrufe = models.PositiveIntegerField("Abrufe", default=0)
+    zuletzt_am = models.DateTimeField("zuletzt abgerufen", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Kalender-Abo"
+        verbose_name_plural = "Kalender-Abos"
+        ordering = ["-erstellt_am"]
+
+    def __str__(self):
+        return f"Kalender-Abo {self.person}"
+
+    @property
+    def aktiv(self):
+        return self.beendet_am is None and self.person.is_active and self.person.familie_id is not None
+
+    @property
+    def link(self):
+        return settings.BASIS_URL + reverse("freigaben:abo_feed", args=[self.token])
+
+    @property
+    def webcal(self):
+        return "webcal://" + self.link.split("://", 1)[1]
+
+    def abgerufen(self):
+        Kalenderabo.objects.filter(pk=self.pk).update(abrufe=models.F("abrufe") + 1, zuletzt_am=timezone.now())
 
     def beenden(self):
         if self.beendet_am is None:

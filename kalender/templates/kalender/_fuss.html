@@ -13,5 +13,5 @@
   <p><b>Geplanter Urlaub:</b>
     {% for u in urlaube %}{{ u.zeitraum }} {{ u.titel }} ({% if u.urlaubstage %}{{ u.urlaubstage }} Urlaubstag{{ u.urlaubstage|pluralize:"e" }}{% else %}kein Urlaubstag{% endif %}){% if not forloop.last %} · {% endif %}{% empty %}noch keiner{% endfor %}
     {% if urlaube %} · <b>Summe {{ urlaubstage_summe }} Urlaubstag{{ urlaubstage_summe|pluralize:"e" }}</b>{% endif %}</p>
-  <p class="quelle">Ferientermine: {{ ferien_quelle }} · Feiertage: gesetzliche Feiertage {{ bundesland_name }} · Angaben ohne Gewähr</p>
+  <p class="quelle">{% if stand %}Stand {{ stand|date:"d.m.Y, H:i" }} Uhr · {% endif %}Ferientermine: {{ ferien_quelle }} · Feiertage: gesetzliche Feiertage {{ bundesland_name }} · Angaben ohne Gewähr</p>
 </div>

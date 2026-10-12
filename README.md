@@ -21,7 +21,11 @@ Django 5.2, PostgreSQL, Docker Compose; Oberfläche mit Django-Templates ohne JS
   Höchstgeschwindigkeit), Ländern, Vignettenpflicht und Fähren; Adressen werden geocodiert.
 - **Karte** je Reise (Leaflet) mit Routenverlauf, umschaltbar zwischen OpenStreetMap und TomTom.
 - **Jahreskalender** als Seite und PDF (A4 quer): Monatsfarben, Feiertage, Schulferien, Urlaube.
-- **Exporte** je Reise: PDF und Excel mit echten Formeln.
+- **Exporte** je Reise: PDF und Excel mit echten Formeln; PDFs und Excel tragen den Stand (Datum und Uhrzeit)
+  im Dokument und im Dateinamen.
+- **Kalender-Abo** (iCal) für Google, Apple oder Outlook: je Reise ein ganztägiger Termin über den Urlaub,
+  Ort = Haupturlaubsort mit Adresse (Platz mit den meisten Nächten, ohne Zwischenübernachtungen und Fähren);
+  geheimer Link je Person, jederzeit erneuerbar oder beendbar.
 - **Erinnerungen per Mail:** Restzahlungen, eigene Erinnerungen („Fähre buchbar ab …“),
   Reisecheck 14 Tage vor Abfahrt.
 - **Teilen per Link** mit Ablaufdatum – eine Reise oder den Jahreskalender per WhatsApp, E-Mail

@@ -176,11 +176,14 @@ def _datei(inhalt, name, typ, anzeigen=False):
 @login_required
 def excel(request, pk):
     r = _laden(request, pk)
-    return _datei(dokumente.excel(r), dokumente.dateiname(r, "xlsx"),
+    stand = dokumente.stand_jetzt()
+    return _datei(dokumente.excel(r, stand), dokumente.dateiname(r, "xlsx", stand),
                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
 @login_required
 def pdf(request, pk):
     r = _laden(request, pk)
-    return _datei(dokumente.pdf(r, _kontext(r)), dokumente.dateiname(r, "pdf"), "application/pdf", anzeigen=True)
+    stand = dokumente.stand_jetzt()
+    return _datei(dokumente.pdf(r, _kontext(r), stand), dokumente.dateiname(r, "pdf", stand), "application/pdf",
+                  anzeigen=True)

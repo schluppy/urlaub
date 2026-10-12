@@ -1,0 +1,48 @@
+{% extends "portal/base.html" %}
+{% load static %}
+{% block titel %}Google Kalender{% endblock %}
+{% block kopf %}<script src="{% static 'freigaben/teilen.js' %}" defer></script>{% endblock %}
+{% block inhalt %}
+<p class="brotkrumen"><a href="{% url 'kalender:start' %}">Kalender</a></p>
+<h1>Urlaube im eigenen Kalender</h1>
+<p>Mit einem Abo-Link erscheinen eure geplanten Urlaube in Google Kalender (oder Apple, Outlook):
+je Reise ein ganztägiger Termin über den Urlaub, als Ort der Haupturlaubsort. Änderungen in der App
+übernimmt der Kalender von selbst – bei Google allerdings mit Verzögerung (meist einige Stunden, bis zu einem Tag).</p>
+
+{% if abo %}
+<section class="flaeche betont" aria-labelledby="link">
+  <h2 id="link">Dein Abo-Link</h2>
+  <p class="leise klein">Geheim halten: Wer den Link kennt, sieht eure Urlaube. Erstellt {{ abo.erstellt_am|date:"d.m.Y" }}
+    · {{ abo.abrufe }} Abruf{{ abo.abrufe|pluralize:"e" }}{% if abo.zuletzt_am %}, zuletzt {{ abo.zuletzt_am|date:"d.m. H:i" }}{% endif %}</p>
+  <input class="link-feld" type="text" readonly value="{{ abo.link }}" aria-label="Abo-Link" onclick="this.select()">
+  <div class="teilen-knoepfe">
+    <button type="button" class="knopf" data-kopieren="{{ abo.link }}">Link kopieren</button>
+    <a class="knopf zweit" href="https://calendar.google.com/calendar/r/settings/addbyurl" target="_blank" rel="noopener">Google Kalender öffnen</a>
+    <a class="knopf zweit" href="{{ abo.webcal }}">Apple / Outlook</a>
+  </div>
+
+  <h3>So kommt es in Google Kalender</h3>
+  <ol>
+    <li><b>Link kopieren</b> (Knopf oben).</li>
+    <li><b>Google Kalender öffnen</b> – am Computer im Browser, die App auf dem Handy kann keine Abos hinzufügen.
+        Der Knopf öffnet direkt „Per URL hinzufügen“.</li>
+    <li>Link einfügen und <b>„Kalender hinzufügen“</b> klicken.</li>
+    <li>Fertig: Der Kalender „Urlaube {{ user.familie }}“ erscheint links unter „Weitere Kalender“ und
+        nach kurzer Zeit auch in der App auf dem Handy.</li>
+  </ol>
+
+  <form method="post" class="aktionen">
+    {% csrf_token %}
+    <button class="knopf zweit" type="submit" name="aktion" value="erzeugen">Neuen Link erzeugen</button>
+    <button class="knopf gefahr" type="submit" name="aktion" value="beenden">Link beenden</button>
+  </form>
+  <p class="leise klein">Ein neuer Link ersetzt den bisherigen; den alten danach in Google Kalender entfernen und den neuen hinzufügen.</p>
+</section>
+{% else %}
+<form method="post" class="flaeche">
+  {% csrf_token %}
+  <p>Du hast noch keinen Abo-Link.</p>
+  <button class="knopf" type="submit" name="aktion" value="erzeugen">Abo-Link erzeugen</button>
+</form>
+{% endif %}
+{% endblock %}

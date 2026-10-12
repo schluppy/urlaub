@@ -89,7 +89,7 @@ class SeiteTest(TestCase):
         antwort = self.client.get(reverse("reisen:pdf", args=[self.reise.pk]))
         self.assertEqual(antwort["Content-Type"], "application/pdf")
         self.assertTrue(antwort.content.startswith(b"%PDF"))
-        self.assertIn("2026-05-29_Schottland.pdf", antwort["Content-Disposition"])
+        self.assertRegex(antwort["Content-Disposition"], r'filename="2026-05-29_Schottland_Stand_\d{4}-\d{2}-\d{2}_\d{4}\.pdf"')
 
     def test_excel_mit_formeln(self):
         antwort = self.client.get(reverse("reisen:excel", args=[self.reise.pk]))

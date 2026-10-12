@@ -5,6 +5,7 @@ from io import BytesIO
 from django.conf import settings
 from django.db.models import Prefetch
 from django.template.loader import render_to_string
+from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
@@ -39,9 +40,18 @@ def reise_laden(pk, familie):
             .get(pk=pk))
 
 
-def dateiname(reise, endung):
+def stand_jetzt():
+    """Zeitpunkt der Erzeugung (Ortszeit) – steht im Dokument und im Dateinamen."""
+    return timezone.localtime()
+
+
+def stempel(stand):
+    return f"Stand_{stand:%Y-%m-%d_%H%M}"
+
+
+def dateiname(reise, endung, stand):
     titel = "".join(c if c.isalnum() else "_" for c in reise.titel).strip("_")
-    return f"{reise.urlaub_beginn:%Y-%m-%d}_{titel}.{endung}"
+    return f"{reise.urlaub_beginn:%Y-%m-%d}_{titel}_{stempel(stand)}.{endung}"
 
 
 # --- Excel -------------------------------------------------------------------
@@ -69,7 +79,7 @@ def _bereich(spalte, anzahl):
     return f"{spalte}2:{spalte}{max(anzahl, 1) + 1}"
 
 
-def excel(reise):
+def excel(reise, stand):
     wb = Workbook()
     ue = wb.active
     ue.title = "Übersicht"
@@ -161,6 +171,8 @@ def excel(reise):
     if reise.hat_eigenen_urlaub:
         ue["A2"] = ue["A2"].value + f", unterwegs {reise.von:%d.%m.} – {reise.bis:%d.%m.%Y}" + (
             " (Abfahrt nach Feierabend)" if reise.abfahrt_feierabend else "")
+    ue["C1"] = f"Stand: {stand:%d.%m.%Y, %H:%M} Uhr"
+    ue["C1"].font = Font(italic=True, color="666666")
     etappen_summe = n_et + 2
     buchung_summe = n_bu + 2
     zeilen = [
@@ -199,10 +211,10 @@ def excel(reise):
 # --- PDF ---------------------------------------------------------------------
 
 
-def pdf(reise, kontext):
+def pdf(reise, kontext, stand):
     from weasyprint import HTML
 
     html = render_to_string("reisen/pdf.html", {
-        **kontext, "schriften": (settings.BASE_DIR / "static" / "fonts").as_uri(),
+        **kontext, "schriften": (settings.BASE_DIR / "static" / "fonts").as_uri(), "stand": stand,
         "zeitraum": zeitraum_text(reise.von, reise.bis)})
     return HTML(string=html, base_url=str(settings.BASE_DIR)).write_pdf()

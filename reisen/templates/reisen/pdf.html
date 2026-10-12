@@ -8,7 +8,7 @@
 @font-face { font-family: "Barlow Condensed"; src: url("{{ schriften }}/BarlowCondensed-SemiBold.ttf"); font-weight: 600; }
 @font-face { font-family: "Barlow Condensed"; src: url("{{ schriften }}/BarlowCondensed-Bold.ttf"); font-weight: 700; }
 @page { size: A4; margin: 14mm 13mm 16mm;
-  @bottom-left { content: "{{ reise.titel }} · {{ zeitraum }}"; font: 8pt "DejaVu Sans"; color: #777; }
+  @bottom-left { content: "{{ reise.titel }} · {{ zeitraum }} · Stand {{ stand|date:'d.m.Y, H:i' }} Uhr"; font: 8pt "DejaVu Sans"; color: #777; }
   @bottom-right { content: "Seite " counter(page) " von " counter(pages); font: 8pt "DejaVu Sans"; color: #777; } }
 body { font: 9pt/1.4 "DejaVu Sans", sans-serif; color: #1C2430; margin: 0; }
 h1, h2 { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; color: #173F73; margin: 0; }
