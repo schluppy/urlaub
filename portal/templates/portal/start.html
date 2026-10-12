@@ -50,7 +50,7 @@
     <td class="zahl">{{ r.entfernung_km|km }}</td>
     <td class="zahl">{{ r.naechte|default:"–" }}</td>
     <td class="zahl">{{ r.gesamtkosten|euro }}{% if r.offen_eur %}<br><span class="leise klein">offen {{ r.offen_eur|euro }}</span>{% endif %}</td>
-    <td>{{ r.ziele|join:", "|default:"–" }}</td>
+    <td class="ziele">{% for name, status, text in r.ziele_mit_status %}<span class="ziel">{{ name }} <span class="status {{ status }}">{{ text }}</span></span>{% if not forloop.last %}, {% endif %}{% empty %}–{% endfor %}</td>
   </tr>
   {% endfor %}
   </tbody>

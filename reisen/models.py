@@ -166,15 +166,6 @@ class Reise(models.Model):
     def offen_eur(self):
         return sum((b.rest_eur for b in self._buchungen() if b.status != Buchungsstatus.BEZAHLT), Decimal(0))
 
-    @property
-    def ziele(self):
-        """Gebuchte Orte in Reihenfolge, ohne Doppelte."""
-        namen = []
-        for b in sorted(self._buchungen(), key=lambda b: b.von):
-            if b.ort.name not in namen:
-                namen.append(b.ort.name)
-        return namen
-
     def aufenthalte(self):
         """Übernachtungen laut Etappen: [(Ort, Ankunft, Abfahrt)] – Ankunft mit einer Etappe,
         Abfahrt mit der nächsten. Zuhause und Zwischenhalte ohne Nacht zählen nicht."""
@@ -203,6 +194,17 @@ class Reise(models.Model):
                 if ort.typ not in nebensaechlich:
                     naechte[ort] = naechte.get(ort, 0) + (ab - an).days
         return max(naechte, key=naechte.get) if naechte else None   # max nimmt bei Gleichstand den ersten
+
+    @property
+    def ziele_mit_status(self):
+        """[(Ortsname, Status, Statustext)] in Buchungsreihenfolge, ohne stornierte;
+        derselbe Platz mit gleichem Status nur einmal (z. B. Zwischenstopp auf Hin- und Rückweg)."""
+        ergebnis = []
+        for b in sorted(self._buchungen(), key=lambda b: b.von):
+            eintrag = (b.ort.name, b.status, b.get_status_display())
+            if eintrag not in ergebnis:
+                ergebnis.append(eintrag)
+        return ergebnis
 
     def kostenaufstellung(self):
         """[(Bezeichnung, Betrag €)] – Diesel, Übernachtungen, dann je Kostenart."""
