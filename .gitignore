@@ -14,3 +14,4 @@ kalender/management/commands/startdaten_privat.py
 reisen/management/commands/import_2026.py
 tests/test_import.py
 BETRIEB-LOKAL.md
+betrieb/backup-dateien.txt

@@ -81,7 +81,12 @@ Nach Codeänderungen: `docker compose up -d --build`.
 ### Regelmäßige Aufgaben (Cron)
 
     0 7 * * *   cd /pfad/zu/urlaub && docker compose exec -T web python manage.py erinnerungen >> erinnerungen.log 2>&1
-    30 3 * * *  /pfad/zu/urlaub/betrieb/backup.sh
+    30 3 * * *  /pfad/zu/urlaub/betrieb/backup.sh >> /var/log/urlaub-backup.log 2>&1
+
+`backup.sh` sichert täglich die Datenbank (`db-DATUM.dump`) und die Konfiguration (`konfig-DATUM.tgz`:
+`.env`, `msmtprc`, `msmtp.env` und die Dateien aus `betrieb/backup-dateien.txt`) nach `/var/backups/urlaub`
+und behält höchstens `BACKUP_TAGE` Tage (Standard 14). Mit `BACKUP_EXTERN` in `.env` kommt optional eine
+Kopie in ein weiteres Verzeichnis, etwa ein eingebundenes Netzlaufwerk.
 
 ### Weitere Befehle
 

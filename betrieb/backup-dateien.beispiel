@@ -1,0 +1,4 @@
+# Zusätzliche Dateien für das Konfigurationsarchiv (relativ zu /opt/urlaub, eine je Zeile).
+# Kopieren nach betrieb/backup-dateien.txt (bleibt privat, steht in .gitignore).
+# .env, msmtprc und msmtp.env sichert backup.sh immer.
+# kalender/management/commands/meine_startdaten.py
