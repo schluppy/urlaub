@@ -89,6 +89,7 @@ Nach Codeänderungen: `docker compose up -d --build`.
 |---|---|
 | `erinnerungen --trocken --heute 2027-08-20` | zeigt, was an einem Tag verschickt würde |
 | `routenlinien` | lädt den Streckenverlauf für die Karte nach, ohne Entfernung und Fahrzeit zu ändern |
+| `schulferien_laden SH 2026 2028` | Schulferien aus der [OpenHolidays API](https://www.openholidaysapi.org) laden – ein Kürzel oder `ALLE` Bundesländer (auch per Knopf in der Verwaltung → Schulferien). Regionale Ausnahmen (z. B. Inseln in SH) werden übersprungen, bei getrennten Schularten (MV) zählen die allgemeinbildenden. Beim Anlegen einer Familie werden fehlende Schulferien ihres Landes für dieses und nächstes Jahr automatisch geholt. |
 | `beispieldaten` | Beispielfamilie mit Reisen 2027 |
 | `person_anlegen` | erste Person bzw. Super-Admin anlegen |
 

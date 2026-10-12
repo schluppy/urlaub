@@ -1,5 +1,5 @@
 from django import forms
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Count, Sum
 
 from .mandant import NurSuperAdmin
@@ -51,6 +51,22 @@ class FamilieAdmin(NurSuperAdmin, admin.ModelAdmin):
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("api_schluessel").annotate(
             n_personen=Count("personen", distinct=True))
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        from datetime import date
+
+        from kalender.schulferien import SchulferienFehler, fehlen, laden
+        jahre = fehlen(obj.bundesland, [date.today().year, date.today().year + 1])
+        if not jahre:
+            return
+        try:
+            neu, _ = laden(obj.bundesland, jahre)
+            messages.info(request, f"Schulferien {obj.bundesland_name} {', '.join(map(str, jahre))}: "
+                                   f"{len(neu)} Termine abgerufen (OpenHolidays API).")
+        except SchulferienFehler as e:
+            messages.warning(request, f"Schulferien konnten nicht abgerufen werden: {e} "
+                                      "Bitte unter Schulferien → „Schulferien abrufen“ nachholen.")
 
     @admin.display(description="TomTom-Schlüssel")
     def schluessel_anzeige(self, obj):

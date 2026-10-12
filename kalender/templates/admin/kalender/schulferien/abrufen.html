@@ -1,0 +1,14 @@
+{% extends "admin/base_site.html" %}
+{% block title %}Schulferien abrufen | {{ site_title }}{% endblock %}
+{% block breadcrumbs %}<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Start</a> › <a href="{% url 'admin:kalender_schulferien_changelist' %}">Schulferien</a> › Abrufen</div>{% endblock %}
+{% block content %}
+<h1>Schulferien abrufen</h1>
+<p>Holt die Termine aus der <a href="https://www.openholidaysapi.org" target="_blank" rel="noopener">OpenHolidays API</a>
+(offene Daten). Regionale Ausnahmen – z. B. die Inseln und Halligen in Schleswig-Holstein – werden übersprungen.
+Schon eingetragene Termine bleiben unverändert. Bitte nach dem Abruf mit der Seite des Kultusministeriums abgleichen.</p>
+<form method="post">
+  {% csrf_token %}
+  {{ form.as_p }}
+  <input type="submit" class="default" value="Abrufen">
+</form>
+{% endblock %}
