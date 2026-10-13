@@ -112,3 +112,16 @@ class KarteTest(TestCase):
         self.assertEqual((self.hin.entfernung_km, self.hin.fahrzeit), (Decimal(818), timedelta(hours=9, minutes=25)))
         self.assertEqual(self.hin.routing_details["laender"], ["DEU"])
         self.assertEqual(len(self.hin.routing_details["linie"]), 3)
+
+
+class LuftlinienHinweisTest(TestCase):
+    def test_hinweis_nur_bei_luftlinie(self):
+        from reisen.views import kartendaten
+        f = fam()
+        a = Ort.objects.create(familie=f, name="A", breite=Decimal("54"), laenge=Decimal("10"))
+        b = Ort.objects.create(familie=f, name="B", breite=Decimal("50"), laenge=Decimal("9"))
+        r = Reise.objects.create(familie=f, titel="X", von=date(2027, 7, 1), bis=date(2027, 7, 2))
+        e = Etappe.objects.create(reise=r, datum=r.von, von_ort=a, nach_ort=b)
+        self.assertTrue(kartendaten(r)["luftlinie"])
+        Etappe.objects.filter(pk=e.pk).update(routing_details={"linie": [[54, 10], [52, 9.5], [50, 9]]})
+        self.assertFalse(kartendaten(Reise.objects.get(pk=r.pk))["luftlinie"])

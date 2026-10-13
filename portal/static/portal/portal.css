@@ -58,6 +58,7 @@ p { max-width: 42rem; margin: 0 0 0.8rem; }
 
 .flaeche { background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 1rem 1.2rem; margin: 1rem 0; }
 .flaeche > :last-child { margin-bottom: 0; }
+.flaeche > :first-child { margin-top: 0; }   /* Überschrift oben im Kasten ohne eigenen Abstand */
 
 .meldungen { list-style: none; padding: 0; margin: 0 0 1rem; }
 .meldung { padding: 0.6rem 0.9rem; border-radius: 4px; margin-bottom: 0.4rem; border-left: 4px solid var(--gruen); background: var(--gruen-hell); }

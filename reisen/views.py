@@ -107,7 +107,7 @@ def kartendaten(reise, oeffentlich=False):
             if len(punkte) < 2:
                 continue
         strecken.append({"punkte": punkte, "gerade": not linie, "text": text})
-    return {"orte": list(orte.values()), "strecken": strecken}
+    return {"orte": list(orte.values()), "strecken": strecken, "luftlinie": any(s["gerade"] for s in strecken)}
 
 
 @require_GET

@@ -6,6 +6,9 @@ TomTom berechnen und einen Jahres-Urlaubskalender mit Schulferien und Feiertagen
 
 Django 5.2, PostgreSQL, Docker Compose; Oberfläche mit Django-Templates ohne JS-Framework.
 
+Wie der Urlaubsplaner entstanden ist und wie er im Alltag aussieht, mit Bildern, steht im Blogbeitrag
+[Unsere Urlaubstabelle hat ausgedient – der Urlaubsplaner](https://schluppeck.com/unsere-urlaubstabelle-hat-ausgedient-der-urlaubsplaner/).
+
 ## Was die App kann
 
 - **Reisen** mit zwei Zeiträumen: *Urlaub* (inkl. Vor- und Nachbereitung, bestimmt Kalender und
