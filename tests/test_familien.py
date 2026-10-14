@@ -131,6 +131,20 @@ class TrennungTest(TestCase):
         self.assertNotIn("BBB", an[("anna@example.org",)])
         self.assertNotIn("AAA", an[("bert@example.org",)])
 
+    def test_familie_nie_auswaehlbar(self):
+        for person in [self.anna, self.boss]:     # auch der Super-Admin wählt keine fremde Familie
+            for name in ["reisen_erinnerung", "reisen_reise", "orte_ort", "fahrzeuge_fahrzeugprofil"]:
+                with self.subTest(person=person.name, seite=name):
+                    inhalt = self.seite(person, reverse(f"admin:{name}_add")).content.decode()
+                    self.assertNotIn('name="familie"', inhalt)
+                    self.assertNotIn("Müller", inhalt)
+        # auch ein untergeschobenes Feld landet bei der eigenen Familie
+        self.client.force_login(self.anna)
+        antwort = self.client.post(reverse("admin:reisen_erinnerung_add"),
+                                   {"familie": self.b.pk, "datum": "2027-07-01", "text": "Neu", "reise": ""})
+        self.assertEqual(antwort.status_code, 302)
+        self.assertEqual(Erinnerung.objects.get(text="Neu").familie, self.a)
+
     def test_bundesland_bestimmt_feiertage_und_ferien(self):
         # 15.08. Mariä Himmelfahrt: in Bayern (teilweise) Feiertag laut holidays-Paket, in SH nicht
         r_by = Reise.objects.create(familie=self.b, titel="BY", von=date(2027, 11, 1), bis=date(2027, 11, 1))

@@ -50,6 +50,13 @@ class FamilienMixin:
             kwargs["queryset"] = modell.objects.filter(familie=familie) if familie else modell.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    def get_exclude(self, request, obj=None):
+        """Die Familie wählt niemand aus – sie ist immer die eigene (gesetzt in _mit_familie)."""
+        ausschluss = list(super().get_exclude(request, obj) or [])
+        if any(f.name == "familie" for f in self.model._meta.get_fields()) and "familie" not in ausschluss:
+            ausschluss.append("familie")
+        return ausschluss
+
     def get_form(self, request, obj=None, **kwargs):
         basis = super().get_form(request, obj, **kwargs)
         return _mit_familie(basis, familie_von(request))
