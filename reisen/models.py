@@ -44,11 +44,25 @@ class Reise(models.Model):
     im_kalender = models.BooleanField("im Kalender", default=True,
                                       help_text="aus für Alternativen, die nur geplant werden")
     notizen = models.TextField("Notizen", blank=True)
+    # Kalender-Abo: Version des Termins, damit Google & Co. Änderungen sicher übernehmen
+    ical_pruefsumme = models.CharField(max_length=64, blank=True, editable=False)
+    ical_version = models.PositiveIntegerField(default=0, editable=False)
+    ical_geaendert = models.DateTimeField(null=True, blank=True, editable=False)
 
     class Meta:
         verbose_name = "Reise"
         verbose_name_plural = "Reisen"
         ordering = ["von"]
+
+    ICAL_FELDER = {"ical_pruefsumme", "ical_version", "ical_geaendert"}
+
+    def save(self, *args, **kwargs):
+        # Die Termin-Version pflegt nur der Kalender-Feed; ein normales Speichern (Verwaltung)
+        # darf sie nicht mit einem veralteten Stand überschreiben.
+        if self.pk and not self._state.adding and kwargs.get("update_fields") is None:
+            kwargs["update_fields"] = [f.name for f in self._meta.concrete_fields
+                                       if not f.primary_key and f.name not in self.ICAL_FELDER]
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.titel} ({self.von:%d.%m.%Y})"

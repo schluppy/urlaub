@@ -3,6 +3,7 @@
 Je Reise ein ganztägiger Termin über den Urlaubszeitraum; Ort ist der Haupturlaubsort
 (Platz mit den meisten Nächten, ohne Zwischenübernachtungen, Fähren und Zuhause).
 """
+import hashlib
 from datetime import timedelta
 from datetime import timezone as dt_timezone
 from urllib.parse import urlparse
@@ -53,9 +54,26 @@ def beschreibung(reise, link):
     return "\n".join(zeilen)
 
 
+def _utc(zeitpunkt):
+    return zeitpunkt.astimezone(dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def version(reise, inhalt):
+    """(SEQUENCE, LAST-MODIFIED) des Termins. Ändert sich der Inhalt, steigt die Version –
+    ohne steigende Version übernehmen manche Kalender (Google) geänderte Termine nicht."""
+    pruefsumme = hashlib.sha256("\n".join(inhalt).encode()).hexdigest()
+    if pruefsumme != reise.ical_pruefsumme:
+        reise.ical_version = reise.ical_version + 1 if reise.ical_pruefsumme else 0
+        reise.ical_pruefsumme = pruefsumme
+        reise.ical_geaendert = timezone.now()
+        Reise.objects.filter(pk=reise.pk).update(ical_pruefsumme=pruefsumme, ical_version=reise.ical_version,
+                                                 ical_geaendert=reise.ical_geaendert)
+    return reise.ical_version, reise.ical_geaendert
+
+
 def kalender(familie):
     host = urlparse(settings.BASIS_URL).hostname or "urlaubsplaner"
-    jetzt = timezone.now().astimezone(dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    jetzt = _utc(timezone.now())
     zeilen = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Urlaubsplaner//DE", "CALSCALE:GREGORIAN",
               "METHOD:PUBLISH", f"X-WR-CALNAME:{_text('Urlaube ' + familie.name)}", "X-WR-TIMEZONE:Europe/Berlin",
               "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H"]
@@ -63,16 +81,17 @@ def kalender(familie):
               .prefetch_related("buchungen__ort", "etappen__von_ort", "etappen__nach_ort").order_by("von"))
     for r in reisen:
         link = settings.BASIS_URL + reverse("reisen:reise", args=[r.pk])
-        ereignis = ["BEGIN:VEVENT", f"UID:reise-{r.pk}@{host}", f"DTSTAMP:{jetzt}",
-                    f"DTSTART;VALUE=DATE:{r.urlaub_beginn:%Y%m%d}",
-                    f"DTEND;VALUE=DATE:{r.urlaub_ende + timedelta(days=1):%Y%m%d}",   # Ende ist exklusiv
-                    f"SUMMARY:{_text(r.titel)}"]
+        inhalt = [f"DTSTART;VALUE=DATE:{r.urlaub_beginn:%Y%m%d}",
+                  f"DTEND;VALUE=DATE:{r.urlaub_ende + timedelta(days=1):%Y%m%d}",   # Ende ist exklusiv
+                  f"SUMMARY:{_text(r.titel)}"]
         ort = r.hauptort
         if ort:
-            ereignis.append(f"LOCATION:{_text(ort_text(ort))}")
+            inhalt.append(f"LOCATION:{_text(ort_text(ort))}")
             if ort.hat_koordinaten:
-                ereignis.append(f"GEO:{ort.breite};{ort.laenge}")
-        ereignis += [f"DESCRIPTION:{_text(beschreibung(r, link))}", f"URL:{link}", "END:VEVENT"]
-        zeilen += ereignis
+                inhalt.append(f"GEO:{ort.breite};{ort.laenge}")
+        inhalt += [f"DESCRIPTION:{_text(beschreibung(r, link))}", f"URL:{link}"]
+        sequenz, geaendert = version(r, inhalt)
+        zeilen += ["BEGIN:VEVENT", f"UID:reise-{r.pk}@{host}", f"DTSTAMP:{jetzt}",
+                   f"LAST-MODIFIED:{_utc(geaendert)}", f"SEQUENCE:{sequenz}", *inhalt, "END:VEVENT"]
     zeilen.append("END:VCALENDAR")
     return "\r\n".join(_falten(z) for z in zeilen) + "\r\n"

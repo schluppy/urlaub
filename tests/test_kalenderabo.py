@@ -81,6 +81,23 @@ class IcalTest(TestCase):
         self.assertEqual(entfaltet.count("BEGIN:VEVENT"), 1)               # keine Alternative, keine fremde Familie
         self.assertNotIn("Fremdreise", entfaltet)
 
+    def test_version_steigt_nur_bei_aenderung(self):
+        def termin():
+            ics = kalender(self.f).replace("\r\n ", "")
+            return [z for z in ics.split("\r\n") if z.startswith(("SEQUENCE:", "LAST-MODIFIED:"))]
+
+        erst = termin()
+        self.assertIn("SEQUENCE:0", erst)
+        self.assertEqual(termin(), erst)                                   # unverändert: gleiche Version
+        Buchung.objects.create(reise=self.r, ort=self.see, von=date(2027, 9, 19), bis=date(2027, 9, 20))
+        self.assertIn("SEQUENCE:1", termin())                              # Übernachtung in der Beschreibung
+        self.r.titel = "Sommer am Rhein"
+        self.r.save()
+        self.assertIn("SEQUENCE:2", termin())
+        self.r.notizen = "nur intern"
+        self.r.save()
+        self.assertIn("SEQUENCE:2", termin())                              # steht nicht im Termin
+
     def test_zeilen_hoechstens_75_byte(self):
         self.r.titel = "Ä" * 120
         self.r.save()
