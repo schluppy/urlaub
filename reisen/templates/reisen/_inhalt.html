@@ -33,7 +33,7 @@
     <td class="zahl">{% if e.ankunft %}{% if e.ankunft.date != e.datum %}{{ e.ankunft|date:"d.m." }} {% endif %}{{ e.ankunft|time:"H:i" }}{% else %}–{% endif %}</td>
     <td class="zahl">{{ e.entfernung_km|km }}</td>
     <td class="klein">{% with d=e.routing_details %}{% if d.laender %}{{ d.laender|join:" → " }}{% endif %}{% if d.vignetten %}<br><b>Vignette {{ d.vignetten|join:", " }}</b>{% endif %}{% if d.faehre %}<br>Fähre{% endif %}{% endwith %}
-      {% if e.routing_stand %}<br><span class="leise">TomTom {{ e.routing_stand|date:"d.m.y" }}</span>{% endif %}</td>
+      {% if e.routing_stand %}<br><span class="leise">TomTom {{ e.routing_stand|date:"d.m.y" }}{% if e.tomtom_liter is not None %} · {{ e.tomtom_liter|zahl:1 }} L{% endif %}</span>{% endif %}</td>
   </tr>
   {% endfor %}
   </tbody>
@@ -81,7 +81,7 @@
   {% for b in balken %}
   <tr><td><i class="farbpunkt" style="background:{{ b.farbe }}"></i>{{ b.name }}</td><td class="zahl">{{ b.betrag|euro }}</td><td class="zahl leise">{{ b.anteil }} %</td></tr>
   {% endfor %}
-  {% if reise.verbrauch %}<tr><td colspan="3" class="leise klein">Diesel: {{ reise.dieselliter|zahl:0 }} L ({{ reise.verbrauch|zahl:1 }} L/100 km) × {{ reise.dieselpreis|zahl:3 }} €/L</td></tr>{% endif %}
+  {% if reise.dieselliter %}<tr><td colspan="3" class="leise klein">Diesel: {{ reise.dieselliter|zahl:0 }} L ({{ reise.diesel_quelle }}) × {{ reise.dieselpreis|zahl:3 }} €/L</td></tr>{% endif %}
   {% for k in kosten %}{% if k.notiz %}<tr><td colspan="3" class="leise klein">{{ k.get_art_display }}: {{ k.notiz }} ({{ k.betrag|euro }})</td></tr>{% endif %}{% endfor %}
   </tbody>
   <tfoot><tr><th>Gesamt</th><td class="zahl">{{ reise.gesamtkosten|euro }}</td><td></td></tr></tfoot>

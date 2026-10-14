@@ -46,6 +46,8 @@ def routing_text(etappe):
         teile.append("Vignette: " + ", ".join(d["vignetten"]))
     if d.get("faehre"):
         teile.append("Fähre")
+    if etappe.tomtom_liter is not None:
+        teile.append(f"{etappe.tomtom_liter} L Diesel".replace(".", ","))
     if d.get("verkehr_min"):
         teile.append(f"+{d['verkehr_min']} min Verkehr")
     if not d.get("abfahrt"):
@@ -196,8 +198,8 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
             ("Nächte (Buchungen)", obj.naechte),
             ("Entfernung", km(obj.entfernung_km)),
             ("Fahrzeit", dauer(obj.fahrzeit)),
-            ("Diesel", f"{euro(obj.dieselkosten)} ({obj.dieselliter:.0f} L × {obj.dieselpreis} €)"
-             if obj.verbrauch else "Verbrauch fehlt (Fahrzeugprofil oder Feld oben)"),
+            ("Diesel", f"{euro(obj.dieselkosten)} ({obj.dieselliter:.0f} L × {obj.dieselpreis} €; {obj.diesel_quelle})"
+             if obj.dieselliter else "Verbrauch fehlt (Fahrzeugprofil oder Feld oben)"),
             ("Buchungen", euro(obj.buchungen_eur)),
             ("Weitere Kosten", euro(obj.kostenpositionen_eur)),
             ("Gesamt", euro(obj.gesamtkosten)),

@@ -131,11 +131,21 @@ class Reise(models.Model):
 
     @property
     def dieselliter(self):
-        liter = Decimal(0)
-        for e in self._etappen():
-            if e.entfernung_km and e.verbrauch is not None:
-                liter += e.entfernung_km * e.verbrauch / 100
-        return liter
+        return sum((e.dieselliter or 0 for e in self._etappen()), Decimal(0))
+
+    @property
+    def diesel_quelle(self):
+        """Wie die Liter zustande kommen – für die Zeile unter den Kosten."""
+        etappen = [e for e in self._etappen() if e.dieselliter is not None]
+        tomtom = [e for e in etappen if e.tomtom_liter is not None]
+        if not tomtom:
+            return f"{self.verbrauch:.1f} L/100 km".replace(".", ",") if self.verbrauch is not None else ""
+        km = sum((e.entfernung_km or 0 for e in etappen), Decimal(0))
+        schnitt = (f"Ø {(self.dieselliter / km * 100).quantize(Decimal('0.1'), ROUND_HALF_UP)} L/100 km"
+                   .replace(".", ",") if km else "")
+        if len(tomtom) == len(etappen):
+            return f"{schnitt}, Verbrauchskurve TomTom"
+        return f"{schnitt}, {len(tomtom)} von {len(etappen)} Etappen mit Verbrauchskurve TomTom"
 
     @property
     def dieselkosten(self):
@@ -287,6 +297,23 @@ class Etappe(models.Model):
         if self.fahrzeugprofil:
             return self.fahrzeugprofil.verbrauch_l_100km
         return self.reise.verbrauch
+
+    @property
+    def tomtom_liter(self):
+        """Liter laut TomTom – nur, solange das Fahrzeug der Etappe eine Verbrauchskurve hat."""
+        liter = (self.routing_details or {}).get("verbrauch_l")
+        if liter is None or not (self.fahrzeug and self.fahrzeug.verbrauchskurve):
+            return None
+        return Decimal(liter)
+
+    @property
+    def dieselliter(self):
+        """TomTom-Liter, sonst Entfernung × Ø-Verbrauch; None, wenn beides fehlt."""
+        if self.tomtom_liter is not None:
+            return self.tomtom_liter
+        if self.entfernung_km and self.verbrauch is not None:
+            return self.entfernung_km * self.verbrauch / 100
+        return None
 
     @property
     def karten_link(self):

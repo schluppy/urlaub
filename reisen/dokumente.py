@@ -95,8 +95,10 @@ def excel(reise, stand):
         et.append([i - 1, e.datum, e.von_ort.name, e.nach_ort.name, e.startzeit,
                    e.fahrzeit, e.pause or timedelta(),
                    f"=IF(OR(E{i}=\"\",F{i}=\"\"),\"\",E{i}+F{i}+G{i})",
-                   e.entfernung_km, e.verbrauch,
-                   f"=IF(OR(I{i}=\"\",J{i}=\"\"),0,I{i}*J{i}/100)",
+                   e.entfernung_km,
+                   # TomTom-Liter (Verbrauchskurve) als Wert, sonst Formel km × L/100 km
+                   *(("TomTom", e.tomtom_liter) if e.tomtom_liter is not None else
+                     (e.verbrauch, f"=IF(OR(I{i}=\"\",J{i}=\"\"),0,I{i}*J{i}/100)")),
                    " → ".join(d.get("laender", [])), ", ".join(d.get("vignetten", [])),
                    "ja" if d.get("faehre") else "", "Route" if e.karten_link else ""])
         if e.karten_link:
@@ -181,7 +183,7 @@ def excel(reise, stand):
         ("Dieselpreis (€/L)", reise.dieselpreis, '0.000 "€"', "Eingabe – ändert die Dieselkosten"),
         ("Entfernung", f"=Etappen!I{etappen_summe}", KM, ""),
         ("Fahrzeit", f"=Etappen!F{etappen_summe}", DAUER, "ohne Pausen"),
-        ("Diesel (Liter)", f"=Etappen!K{etappen_summe}", "0.0", "Summe km × L/100 km je Etappe"),
+        ("Diesel (Liter)", f"=Etappen!K{etappen_summe}", "0.0", "je Etappe km × L/100 km bzw. Liter laut TomTom-Verbrauchskurve"),
         ("Diesel", "=ROUND(B9*B6,2)", EURO, ""),
         ("Übernachtungen", f"=Buchungen!J{buchung_summe}", EURO, ""),
     ]
