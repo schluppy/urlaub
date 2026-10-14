@@ -210,3 +210,19 @@ class DatenschutzTest(TestCase):
         self.assertContains(antwort, "Max Muster")
         self.assertContains(antwort, "TomTom")
         self.assertContains(self.client.get(reverse("portal:anmelden")), reverse("portal:datenschutz"))
+
+
+class NutzungZaehlenTest(TestCase):
+    """Kartenkacheln werden parallel geladen – der Zähler darf keine doppelten Zeilen anlegen."""
+
+    def test_eine_zeile_auch_ohne_schluessel(self):
+        from django.db import IntegrityError, connection, transaction
+        from django.utils import timezone
+
+        f = Familie.objects.create(name="Kachel", bundesland="SH")
+        for _ in range(3):
+            ApiNutzung.zaehlen(f, None, "kachel")
+        self.assertEqual(ApiNutzung.objects.get(familie=f, art="kachel").anzahl, 3)
+        if connection.vendor == "postgresql":    # SQLite kennt NULLS NOT DISTINCT nicht
+            with self.assertRaises(IntegrityError), transaction.atomic():
+                ApiNutzung.objects.create(datum=timezone.localdate(), familie=f, art="kachel")

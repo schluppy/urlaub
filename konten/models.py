@@ -6,13 +6,16 @@ TomTom-Schlüssel an und pflegt die Schulferien – die Reisen anderer Familien
 sieht auch er nicht. Keine Passwörter: Login über einmalig gültige Links per E-Mail.
 """
 import hashlib
+import logging
 import secrets
 from datetime import timedelta
 
 from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.db import models
+from django.db import DatabaseError, models, transaction
 from django.utils import timezone
+
+logger = logging.getLogger(__name__)
 
 
 class Bundesland(models.TextChoices):
@@ -98,12 +101,21 @@ class ApiNutzung(models.Model):
         verbose_name = "TomTom-Nutzung"
         verbose_name_plural = "TomTom-Nutzung"
         ordering = ["-datum", "familie", "art"]
+        # eine Zeile je Tag, Schlüssel, Familie und Art – auch wenn Schlüssel oder Familie leer sind;
+        # sonst legen gleichzeitige Abrufe (Kartenkacheln) doppelte Zeilen an und get() scheitert
+        constraints = [models.UniqueConstraint(fields=["datum", "schluessel", "familie", "art"],
+                                               nulls_distinct=False, name="nutzung_je_tag")]
 
     @classmethod
     def zaehlen(cls, familie, schluessel, art):
-        eintrag, _ = cls.objects.get_or_create(datum=timezone.localdate(), schluessel=schluessel,
-                                               familie=familie, art=art)
-        cls.objects.filter(pk=eintrag.pk).update(anzahl=models.F("anzahl") + 1)
+        """Zählt einen Abruf. Ein Fehler beim Zählen darf den Abruf selbst nie verhindern."""
+        try:
+            with transaction.atomic():
+                eintrag, _ = cls.objects.get_or_create(datum=timezone.localdate(), schluessel=schluessel,
+                                                       familie=familie, art=art)
+                cls.objects.filter(pk=eintrag.pk).update(anzahl=models.F("anzahl") + 1)
+        except DatabaseError:
+            logger.exception("TomTom-Nutzung nicht gezählt")
 
 
 class PersonManager(BaseUserManager):
