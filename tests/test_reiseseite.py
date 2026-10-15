@@ -51,7 +51,7 @@ class HinweiseTest(TestCase):
 
     def test_kostenaufstellung(self):
         r = schottland()
-        self.assertEqual([n for n, _ in r.kostenaufstellung()], ["Diesel", "Übernachtungen", "Fähre"])
+        self.assertEqual([n for n, _ in r.kostenaufstellung()], ["Kraftstoff", "Übernachtungen", "Fähre"])
         self.assertEqual(r.etappen.first().karten_link,
                          "https://www.google.com/maps/dir/?api=1&origin=54.320000,10.130000"
                          "&destination=52.460000,4.600000&travelmode=driving")
@@ -100,7 +100,7 @@ class SeiteTest(TestCase):
         self.assertEqual(et["K2"].value, '=IF(OR(I2="",J2=""),0,I2*J2/100)')
         self.assertEqual(bu["D2"].value, "=C2-B2")
         self.assertEqual(bu["J2"].value, "=ROUND(G2/I2,2)")
-        self.assertEqual(ue["A10"].value, "Diesel")
+        self.assertEqual(ue["A10"].value, "Kraftstoff")
         self.assertEqual(ue["B10"].value, "=ROUND(B9*B6,2)")
         self.assertEqual(ue["A12"].value, "Fähre")
         self.assertEqual(ue["A13"].value, "Gesamtkosten")
@@ -145,3 +145,16 @@ class PreisTest(TestCase):
         bu = wb["Buchungen"]
         self.assertEqual((bu["E1"].value, bu["F1"].value), ("Preis/Nacht", "Gesamtpreis"))
         self.assertEqual((bu["E2"].value, bu["F2"].value, bu["G2"].value), (None, 563, '=IF(F2<>"",F2,D2*E2)'))
+
+
+class EtappenLinksTest(TestCase):
+    def test_plaetze_in_etappen_verlinkt(self):
+        f = fam()
+        zuhause = Ort.objects.create(familie=f, name="Daheim", typ="zuhause", website="https://daheim.example/")
+        see = Ort.objects.create(familie=f, name="Seecamping", website="https://see.example/")
+        r = Reise.objects.create(familie=f, titel="Kurz", von=date(2027, 8, 1), bis=date(2027, 8, 3))
+        Etappe.objects.create(reise=r, datum=date(2027, 8, 1), von_ort=zuhause, nach_ort=see)
+        self.client.force_login(Person.objects.create_user("a@example.org", "A", familie=f, is_staff=True))
+        seite = self.client.get(reverse("reisen:reise", args=[r.pk]))
+        self.assertContains(seite, '<a href="https://see.example/" target="_blank" rel="noopener">Seecamping</a>')
+        self.assertNotContains(seite, "daheim.example")                     # Zuhause nie verlinkt

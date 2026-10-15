@@ -44,6 +44,11 @@ class ApiSchluessel(models.Model):
     schluessel = models.CharField("API-Schlüssel", max_length=100)
     aktiv = models.BooleanField("aktiv", default=True, help_text="inaktiv = Familien nutzen den Standardschlüssel")
     notiz = models.CharField("Notiz", max_length=200, blank=True)
+    kontingent_kacheln = models.PositiveIntegerField(
+        "Tageskontingent Kartenkacheln", default=50000, help_text="TomTom Freemium: 50.000 Kacheln am Tag")
+    kontingent_anfragen = models.PositiveIntegerField(
+        "Tageskontingent übrige Abrufe", default=2500,
+        help_text="Routing, Adresssuche usw. – TomTom Freemium: 2.500 am Tag")
     angelegt_am = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -105,6 +110,21 @@ class ApiNutzung(models.Model):
         # sonst legen gleichzeitige Abrufe (Kartenkacheln) doppelte Zeilen an und get() scheitert
         constraints = [models.UniqueConstraint(fields=["datum", "schluessel", "familie", "art"],
                                                nulls_distinct=False, name="nutzung_je_tag")]
+
+    @staticmethod
+    def kontingent_von(schluessel, art):
+        """Tageskontingent des Schlüssels für diese Art: Kacheln und übrige Abrufe zählen bei TomTom getrennt."""
+        if art == "kachel":
+            return schluessel.kontingent_kacheln if schluessel else settings.TOMTOM_KONTINGENT_KACHELN
+        return schluessel.kontingent_anfragen if schluessel else settings.TOMTOM_KONTINGENT_ANFRAGEN
+
+    @classmethod
+    def genutzt(cls, datum, schluessel, art):
+        """Abrufe eines Tages mit diesem Schlüssel über alle Familien – im selben Kontingent wie `art`."""
+        qs = cls.objects.filter(datum=datum)
+        qs = qs.filter(schluessel=schluessel) if schluessel else qs.filter(schluessel__isnull=True)
+        qs = qs.filter(art="kachel") if art == "kachel" else qs.exclude(art="kachel")
+        return qs.aggregate(n=models.Sum("anzahl"))["n"] or 0
 
     @classmethod
     def zaehlen(cls, familie, schluessel, art):

@@ -1,6 +1,6 @@
 """Reisen mit Etappen, Buchungen, Kostenpositionen und Links.
 
-Alles, was in der Tabelle von Hand gerechnet wurde (Nächte, Dieselkosten,
+Alles, was in der Tabelle von Hand gerechnet wurde (Nächte, Kraftstoffkosten,
 Summen, Urlaubstage), wird hier berechnet und nicht gespeichert.
 """
 from datetime import date, datetime, timedelta
@@ -37,7 +37,7 @@ class Reise(models.Model):
     verbrauch_l_100km = models.DecimalField(
         "Ø Verbrauch (L/100 km)", max_digits=4, decimal_places=1, null=True, blank=True,
         help_text="leer = Wert aus dem Fahrzeugprofil")
-    dieselpreis = models.DecimalField("Dieselpreis (€/L)", max_digits=5, decimal_places=3, default=Decimal("1.80"))
+    dieselpreis = models.DecimalField("Kraftstoffpreis (€/L)", max_digits=5, decimal_places=3, default=Decimal("1.80"))
     vignetten_meiden = models.CharField(
         "Vignettenpflichtige Straßen meiden in", max_length=60, blank=True,
         help_text="ISO-3-Kürzel mit Komma, z. B. CHE,AUT. Leer = Vignettenstraßen erlaubt.")
@@ -231,8 +231,8 @@ class Reise(models.Model):
         return ergebnis
 
     def kostenaufstellung(self):
-        """[(Bezeichnung, Betrag €)] – Diesel, Übernachtungen, dann je Kostenart."""
-        posten = [("Diesel", self.dieselkosten), ("Übernachtungen", self.buchungen_eur)]
+        """[(Bezeichnung, Betrag €)] – Kraftstoff, Übernachtungen, dann je Kostenart."""
+        posten = [("Kraftstoff", self.dieselkosten), ("Übernachtungen", self.buchungen_eur)]
         for art, label in Kostenart.choices:
             betrag = sum((k.betrag for k in self.kosten.all() if k.art == art), Decimal(0))
             if betrag:
@@ -252,7 +252,7 @@ class Reise(models.Model):
             if not (self.von <= e.datum <= self.bis):
                 hinweise.append(("warnung", f"Etappe {e} liegt außerhalb des Reisezeitraums."))
         if etappen and not self.verbrauch:
-            hinweise.append(("warnung", "Kein Verbrauch hinterlegt – Dieselkosten fehlen."))
+            hinweise.append(("warnung", "Kein Verbrauch hinterlegt – Kraftstoffkosten fehlen."))
 
         buchungen = self._buchungen()
         if buchungen:

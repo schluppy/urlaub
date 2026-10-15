@@ -17,7 +17,7 @@ Wie der Urlaubsplaner entstanden ist und wie er im Alltag aussieht, mit Bildern,
 - **Etappen** mit Start, Pause, Fahrzeit und Ankunft; **Buchungen** mit Preis pro Nacht oder
   Gesamtpreis, Fremdwährung, Anzahlung, Rest und Fälligkeit; **Kosten** (Fähre, Vignette, Maut …)
   und **Links**.
-- **Berechnet statt eingetragen:** Nächte, Ankunft, Dieselkosten, Summen in Euro, offene Beträge,
+- **Berechnet statt eingetragen:** Nächte, Ankunft, Kraftstoffkosten, Summen in Euro, offene Beträge,
   Urlaubstage (Mo–Fr ohne Feiertage des Bundeslands).
 - **Hinweise** auf Lücken: Etappen ohne Route, Nächte ohne Buchung, fällige Restzahlungen.
 - **TomTom-Routing** auf Knopfdruck mit Fahrzeugmaßen (Länge, Breite, Höhe, Gewicht, Achsen,

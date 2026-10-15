@@ -13,7 +13,7 @@ from . import dokumente
 from .models import Reise
 from .routing import TomTomFehler, kachel, profil_hinweis, reise_routen
 
-KOSTENFARBEN = {"Diesel": "#2F5D8C", "Übernachtungen": "#E39226", "Fähre": "#1F6F8B",
+KOSTENFARBEN = {"Kraftstoff": "#2F5D8C", "Übernachtungen": "#E39226", "Fähre": "#1F6F8B",
                 "Vignette": "#8A4F9E", "Maut": "#6F7F22", "Sonstiges": "#7A4A2E"}
 
 

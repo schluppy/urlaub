@@ -1,0 +1,1 @@
+{% comment %}Ortsname, mit Website als Link in neuem Fenster – nicht im PDF und nie beim Zuhause.{% endcomment %}{% if ort.website and not pdf and ort.typ != "zuhause" %}<a href="{{ ort.website }}" target="_blank" rel="noopener">{{ ort }}</a>{% else %}{{ ort }}{% endif %}

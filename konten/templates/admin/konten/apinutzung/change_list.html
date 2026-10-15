@@ -1,0 +1,17 @@
+{% extends "admin/change_list.html" %}
+{% block content %}
+<div class="module" style="margin-bottom:16px">
+  <table style="width:100%">
+    <caption>Heute, {{ heute|date:"d.m.Y" }}: Tageskontingent je Schlüssel</caption>
+    <thead><tr><th>Schlüssel</th><th>Kartenkacheln</th><th>Routing, Adresssuche usw.</th></tr></thead>
+    <tbody>
+    {% for k in kontingente_heute %}
+      <tr><td>{{ k.name }}</td><td>{{ k.kacheln }}</td><td>{{ k.anfragen }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="help" style="margin:6px 10px">Gezählt werden nur Abrufe aus dem Urlaubsplaner, über alle Familien mit demselben
+  Schlüssel. Kontingente laut TomTom Freemium; den genauen Stand zeigt das Dashboard auf developer.tomtom.com.</p>
+</div>
+{{ block.super }}
+{% endblock %}

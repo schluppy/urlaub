@@ -7,11 +7,11 @@ const zeile = (p, i, f) => `<tr class="form-row" id="${p}-${i}">${f.map(([n, v, 
 const html = `<input type="date" id="id_von" value="2027-08-27"><input type="date" id="id_bis" value="2027-09-20">
 
 <div id="etappen-group"><table><tbody>
-${zeile("etappen", 0, [["datum", "2027-08-27"], ["von_ort", ["1", "Zuhause"], "select"], ["nach_ort", ["2", "Rheincamping"], "select"]])}
-${zeile("etappen", 1, [["datum", ""], ["von_ort", null, "select"], ["nach_ort", null, "select"]])}
+${zeile("etappen", 0, [["id", "7", "hidden"], ["datum", "2027-08-27"], ["von_ort", ["1", "Zuhause"], "select"], ["nach_ort", ["2", "Rheincamping"], "select"]])}
+${zeile("etappen", 1, [["id", "", "hidden"], ["datum", ""], ["von_ort", null, "select"], ["nach_ort", null, "select"]])}
 <tr class="form-row empty-form" id="etappen-empty"><td><input type="date" name="etappen-__prefix__-datum"></td></tr>
 </tbody></table></div>
-<div id="buchungen-group"><table><tbody>
+<div id="buchungen-group"><table><tbody><tr class="add-row"><td><a href="#">Weitere Buchung</a></td></tr>
 ${zeile("buchungen", 0, [["von", "2027-08-27"], ["bis", "2027-08-28"]])}
 ${zeile("buchungen", 1, [["von", ""], ["bis", ""]])}
 </tbody></table></div>`;
@@ -23,10 +23,10 @@ const q = (n) => d.querySelector(`[name='${n}']`);
 const ok = (name, ist, soll) => console.log((ist === soll ? "OK    " : "FEHLER") + ` ${name}: ${ist}` + (ist === soll ? "" : ` (erwartet ${soll})`));
 // neue Etappe hinzugefügt (wie Djangos „Weitere Etappe hinzufügen“)
 q("etappen-1-datum").closest("tr").dispatchEvent(new w.CustomEvent("formset:added", { bubbles: true, detail: { formsetName: "etappen" } }));
-ok("Etappe 2: Datum vorbelegt", q("etappen-1-datum").value, "2027-08-27");
+ok("Etappe 2: Datum = Tag nach Etappe 1", q("etappen-1-datum").value, "2027-08-28");
 ok("Etappe 2: Von = Nach der vorigen", q("etappen-1-von_ort").value, "2");
 ok("Etappe 2: Von-Text", q("etappen-1-von_ort").selectedOptions[0].text, "Rheincamping");
-ok("Etappe 2: frühestes Datum", q("etappen-1-datum").min, "2027-08-27");
+ok("Etappe 2: frühestes Datum = Reisebeginn", q("etappen-1-datum").min, "2027-08-27");
 ok("Etappe 2: spätestes Datum", q("etappen-1-datum").max, "2027-09-20");
 ok("Etappe 1: frühestes Datum = Reisebeginn", q("etappen-0-datum").min, "2027-08-27");
 // Feierabend-Abfahrt eintragen → Grenzen der ersten Etappe
@@ -36,9 +36,14 @@ ok("Etappe 1 nach früherer Abfahrt: frühestes Datum", q("etappen-0-datum").min
 // erste Etappe auf späteren Tag → Grenze der zweiten wandert mit
 q("etappen-0-datum").value = "2027-08-28";
 q("etappen-0-datum").dispatchEvent(new w.Event("change", { bubbles: true }));
-ok("Etappe 2 folgt Etappe 1", q("etappen-1-datum").min, "2027-08-28");
+ok("Etappe 2 weiter ab Reisebeginn wählbar", q("etappen-1-datum").min, "2027-08-26");
 // neue Buchung
 q("buchungen-1-von").closest("tr").dispatchEvent(new w.CustomEvent("formset:added", { bubbles: true, detail: { formsetName: "buchungen" } }));
 ok("Buchung 2: Anreise = Abreise der vorigen", q("buchungen-1-von").value, "2027-08-28");
 ok("Buchung 2: Abreise frühestens", q("buchungen-1-bis").min, "2027-08-29");
 ok("Buchung 1: Abreise frühestens", q("buchungen-0-bis").min, "2027-08-28");
+
+// Buchungen gesperrt, solange eine Etappe nicht gespeichert ist (Zeile 1 ist neu)
+const gruppe = d.getElementById("buchungen-group");
+ok("Buchungen gesperrt bei neuer Etappe", gruppe.classList.contains("buchung-gesperrt"), true);
+ok("Hinweis sichtbar", gruppe.querySelector(".buchung-hinweis").hidden, false);

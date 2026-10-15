@@ -125,6 +125,9 @@ BETREIBER_EMAIL = os.environ.get("BETREIBER_EMAIL", "")
 # Fachliche Vorgaben
 BUNDESLAND = "SH"
 TOMTOM_API_KEY = os.environ.get("TOMTOM_API_KEY", "")
+# Tageskontingent des Standardschlüssels (TomTom Freemium); weitere Schlüssel: in der Verwaltung
+TOMTOM_KONTINGENT_KACHELN = int(os.environ.get("TOMTOM_KONTINGENT_KACHELN", "50000"))
+TOMTOM_KONTINGENT_ANFRAGEN = int(os.environ.get("TOMTOM_KONTINGENT_ANFRAGEN", "2500"))
 
 if not DEBUG:
     SESSION_COOKIE_SECURE = True

@@ -1,6 +1,9 @@
 from django import forms
 from django.contrib import admin, messages
+from django.db import models
 from django.db.models import Count, Sum
+from django.utils import timezone
+from django.utils.html import format_html
 
 from .mandant import NurSuperAdmin
 from .models import ApiNutzung, ApiSchluessel, Familie, MagicLinkToken, Person
@@ -93,7 +96,7 @@ class ApiSchluesselForm(forms.ModelForm):
 
     class Meta:
         model = ApiSchluessel
-        fields = ["name", "schluessel", "aktiv", "notiz"]
+        fields = ["name", "schluessel", "aktiv", "notiz", "kontingent_kacheln", "kontingent_anfragen"]
 
     def clean_schluessel(self):
         wert = self.cleaned_data["schluessel"].strip()
@@ -116,15 +119,44 @@ class ApiSchluesselAdmin(NurSuperAdmin, admin.ModelAdmin):
         return ", ".join(f.name for f in obj.familien.all()) or "–"
 
 
+def _kontingent_text(genutzt, kontingent):
+    anteil = genutzt * 100 / kontingent if kontingent else 0
+    farbe = "#ba2121" if anteil >= 90 else "#b5651d" if anteil >= 70 else "inherit"
+    return format_html('<span style="color:{}">{} von {} ({} %)</span>', farbe, _tausend(genutzt),
+                       _tausend(kontingent), f"{anteil:.1f}".replace(".", ","))
+
+
+def _tausend(n):
+    return f"{n:,}".replace(",", ".")
+
+
 @admin.register(ApiNutzung)
 class ApiNutzungAdmin(NurSuperAdmin, admin.ModelAdmin):
-    list_display = ["datum", "familie", "schluessel_anzeige", "art", "anzahl"]
+    list_display = ["datum", "familie", "schluessel_anzeige", "art", "anzahl", "kontingent_anzeige"]
     list_filter = ["art", "familie", "schluessel"]
     date_hierarchy = "datum"
 
     @admin.display(description="Schlüssel")
     def schluessel_anzeige(self, obj):
         return str(obj.schluessel) if obj.schluessel else "Standard (.env)"
+
+    @admin.display(description="Tageskontingent des Schlüssels")
+    def kontingent_anzeige(self, obj):
+        """Alle Familien mit diesem Schlüssel an diesem Tag; Routing und Suche teilen sich ein Kontingent."""
+        return _kontingent_text(ApiNutzung.genutzt(obj.datum, obj.schluessel, obj.art),
+                                ApiNutzung.kontingent_von(obj.schluessel, obj.art))
+
+    def changelist_view(self, request, extra_context=None):
+        heute = timezone.localdate()
+        schluessel = [None, *ApiSchluessel.objects.filter(
+            models.Q(aktiv=True) | models.Q(apinutzung__datum=heute)).distinct()]
+        heute_liste = [{
+            "name": str(s) if s else "Standard (.env)",
+            "kacheln": _kontingent_text(ApiNutzung.genutzt(heute, s, "kachel"), ApiNutzung.kontingent_von(s, "kachel")),
+            "anfragen": _kontingent_text(ApiNutzung.genutzt(heute, s, "routing"), ApiNutzung.kontingent_von(s, "routing")),
+        } for s in schluessel]
+        return super().changelist_view(request, {"kontingente_heute": heute_liste, "heute": heute,
+                                                 **(extra_context or {})})
 
     def has_add_permission(self, request, *args):
         return False

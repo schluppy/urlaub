@@ -50,6 +50,14 @@ class FamilienMixin:
             kwargs["queryset"] = modell.objects.filter(familie=familie) if familie else modell.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
 
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        feld = super().formfield_for_dbfield(db_field, request, **kwargs)
+        # kein rotes ✕ neben Auswahlfeldern: es löscht den ausgewählten Ort/das Fahrzeug selbst,
+        # nicht die Zeile – gelöscht wird in der eigenen Liste
+        if feld is not None and hasattr(feld.widget, "can_delete_related"):
+            feld.widget.can_delete_related = False
+        return feld
+
     def get_exclude(self, request, obj=None):
         """Die Familie wählt niemand aus – sie ist immer die eigene (gesetzt in _mit_familie)."""
         ausschluss = list(super().get_exclude(request, obj) or [])

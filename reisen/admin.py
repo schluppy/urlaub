@@ -1,3 +1,6 @@
+from decimal import Decimal
+
+from django import forms
 from django.contrib import admin, messages
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect
@@ -14,12 +17,25 @@ from .models import Buchung, Erinnerung, Etappe, Kostenposition, Link, Reise
 from .routing import profil_hinweis, reise_routen
 
 
-class EtappeInline(FamilienMixin, PickerMixin, admin.TabularInline):
+class EtappeForm(forms.ModelForm):
+    class Meta:
+        model = Etappe
+        fields = "__all__"
+        widgets = {"entfernung_km": forms.NumberInput(attrs={"style": "width:7em", "step": "0.1"})}
+
+
+class EtappeInline(FamilienMixin, PickerMixin, admin.StackedInline):
+    """Je Etappe ein Block mit wenigen Zeilen – passt in den Rahmen statt seitlich hinauszuragen."""
+
     familien_pfad = "reise__familie"
     model = Etappe
+    form = EtappeForm
     extra = 0
-    fields = ["datum", "von_ort", "nach_ort", "startzeit", "pause",
-              "entfernung_km", "fahrzeit", "ankunft_anzeige", "fahrzeugprofil", "routing_anzeige"]
+    fieldsets = [(None, {"fields": [
+        ("datum", "von_ort", "nach_ort"),
+        ("startzeit", "pause", "fahrzeit", "ankunft_anzeige", "entfernung_km"),
+        "routing_anzeige",
+    ]})]
     readonly_fields = ["ankunft_anzeige", "routing_anzeige"]
     autocomplete_fields = ["von_ort", "nach_ort"]
 
@@ -47,7 +63,7 @@ def routing_text(etappe):
     if d.get("faehre"):
         teile.append("Fähre")
     if etappe.tomtom_liter is not None:
-        teile.append(f"{etappe.tomtom_liter} L Diesel".replace(".", ","))
+        teile.append(f"{etappe.tomtom_liter} L Kraftstoff".replace(".", ","))
     if d.get("verkehr_min"):
         teile.append(f"+{d['verkehr_min']} min Verkehr")
     if not d.get("abfahrt"):
@@ -55,17 +71,64 @@ def routing_text(etappe):
     return " · ".join(teile)
 
 
-class BuchungInline(FamilienMixin, PickerMixin, admin.TabularInline):
+class BuchungForm(forms.ModelForm):
+    """Währung und Kurs nur bei Fremdwährung (Haken); ohne Haken gilt Euro."""
+
+    fremdwaehrung = forms.BooleanField(label="Fremdwährung", required=False)
+
+    class Meta:
+        model = Buchung
+        fields = "__all__"
+        widgets = {"waehrung": forms.TextInput(attrs={"size": 4, "maxlength": 3}),
+                   "wechselkurs": forms.NumberInput(attrs={"style": "width:7em", "step": "0.0001"}),
+                   "anzahlung": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
+                   "preis_pro_nacht": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
+                   "gesamtpreis": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
+                   "buchungsnummer": forms.TextInput(attrs={"size": 14})}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["fremdwaehrung"].initial = self.instance.pk is not None and self.instance.ist_fremdwaehrung
+
+    def clean(self):
+        daten = super().clean()
+        if not daten.get("fremdwaehrung"):
+            daten["waehrung"], daten["wechselkurs"] = "EUR", Decimal(1)
+        elif (daten.get("waehrung") or "").upper() in ("", "EUR"):
+            self.add_error("waehrung", "Bitte die Fremdwährung angeben, z. B. GBP.")
+        return daten
+
+
+class BuchungInline(FamilienMixin, PickerMixin, admin.StackedInline):
+    """Je Buchung ein Block mit wenigen Zeilen statt einer sehr breiten Tabellenzeile."""
+
     familien_pfad = "reise__familie"
     model = Buchung
+    form = BuchungForm
     extra = 0
-    fields = ["ort", "von", "bis", "preis_pro_nacht", "gesamtpreis", "waehrung", "wechselkurs",
-              "anzahlung", "rest_faellig_am", "status", "buchungsnummer", "summe_anzeige"]
+    fieldsets = [(None, {"fields": [
+        ("ort", "von", "bis", "status", "buchungsnummer"),
+        ("preis_pro_nacht", "gesamtpreis", "anzahlung", "rest_faellig_am", "fremdwaehrung"),
+        ("waehrung", "wechselkurs"),          # nur sichtbar mit Haken „Fremdwährung“ (eingabe.js)
+        "summe_anzeige",
+    ]})]
     readonly_fields = ["summe_anzeige"]
 
     def get_formset(self, request, obj=None, **kwargs):
         """Platz nur aus den Übernachtungsorten der gespeicherten Etappen (plus bereits gebuchte)."""
         formset = super().get_formset(request, obj, **kwargs)
+
+        class OhnePlatzLeer(formset.form):
+            """Neue Buchungszeile ohne Platz gilt als leer statt als Fehler – sonst blockiert sie das
+            Speichern, solange der Platz noch nicht in einer gespeicherten Etappe steht."""
+
+            def has_changed(self):
+                if not self.instance.pk and not self.data.get(self.add_prefix("ort")):
+                    return False
+                return super().has_changed()
+
+        OhnePlatzLeer.__name__ = formset.form.__name__
+        formset.form = OhnePlatzLeer     # vor dem Anpassen der Felder: Unterklassen bauen base_fields neu
         feld = formset.form.base_fields["ort"]
         ids = set()
         if obj is not None and obj.pk:
@@ -198,7 +261,7 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
             ("Nächte (Buchungen)", obj.naechte),
             ("Entfernung", km(obj.entfernung_km)),
             ("Fahrzeit", dauer(obj.fahrzeit)),
-            ("Diesel", f"{euro(obj.dieselkosten)} ({obj.dieselliter:.0f} L × {obj.dieselpreis} €; {obj.diesel_quelle})"
+            ("Kraftstoff", f"{euro(obj.dieselkosten)} ({obj.dieselliter:.0f} L × {obj.dieselpreis} €; {obj.diesel_quelle})"
              if obj.dieselliter else "Verbrauch fehlt (Fahrzeugprofil oder Feld oben)"),
             ("Buchungen", euro(obj.buchungen_eur)),
             ("Weitere Kosten", euro(obj.kostenpositionen_eur)),

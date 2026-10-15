@@ -40,3 +40,11 @@ def dauer(wert):
         return "–"
     minuten = round(wert / timedelta(minutes=1))
     return f"{minuten // 60}:{minuten % 60:02d} h"
+
+
+@register.simple_tag
+def ohne_suche(cl):
+    """Adresse der Verwaltungsliste ohne Suchbegriff (Filter bleiben, Seite 1)."""
+    from django.contrib.admin.views.main import PAGE_VAR, SEARCH_VAR
+
+    return cl.get_query_string(remove=[SEARCH_VAR, PAGE_VAR])

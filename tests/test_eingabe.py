@@ -53,6 +53,11 @@ class AdminEingabeTest(TestCase):
         self.assertIn('type="time" name="etappen-0-startzeit" value="06:00"', seite)
         self.assertIn('type="time" name="etappen-0-pause" value="01:00"', seite)
         self.assertIn("reisen/eingabe.js", seite)
+        self.assertIn("Ganze Reise löschen", seite)                       # roter Knopf eindeutig
+        self.assertIn('class="loesch-hinweis"', seite)
+        self.assertNotIn('name="etappen-0-fahrzeugprofil"', seite)           # Spalte entfernt
+        self.assertNotIn("delete-related", seite)                           # kein ✕ neben Auswahlfeldern
+        self.assertIn("change-related", seite)                              # Stift bleibt
 
     def test_etappen_nach_datum_sortiert(self):
         daten = leere_inlines(**{
@@ -141,3 +146,101 @@ class LinkTest(TestCase):
         seite = self.client.get(reverse("admin:reisen_reise_change", args=[r.pk])).content.decode()
         self.assertNotIn('name="links-0-reihenfolge"', seite)
         self.assertIn('name="links-0-titel"', seite)
+
+
+class BuchungOhnePlatzTest(TestCase):
+    """Neue Etappen und Buchung in einem Schritt: die Buchungszeile ohne Platz blockiert das Speichern nicht."""
+
+    def test_etappen_werden_gespeichert(self):
+        self.client.force_login(Person.objects.create_superuser("t@example.org", "T", familie=fam()))
+        zuhause = Ort.objects.create(familie=fam(), name="Zuhause", typ="zuhause")
+        see = Ort.objects.create(familie=fam(), name="Seecamping")
+        daten = leere_inlines(**{
+            "titel": "Rundreise", "von": "2027-08-01", "bis": "2027-08-20", "urlaub_von": "", "urlaub_bis": "",
+            "fahrzeugprofil": "", "verbrauch_l_100km": "", "dieselpreis": "1.80", "vignetten_meiden": "",
+            "im_kalender": "on", "notizen": "",
+            "etappen-TOTAL_FORMS": "2",
+            "etappen-0-datum": "2027-08-01", "etappen-0-von_ort": zuhause.pk, "etappen-0-nach_ort": see.pk,
+            "etappen-0-pause": "0:00",
+            "etappen-1-datum": "2027-08-20", "etappen-1-von_ort": see.pk, "etappen-1-nach_ort": zuhause.pk,
+            "etappen-1-pause": "0:00",
+            # vorbelegt, aber Platz noch nicht wählbar
+            "buchungen-TOTAL_FORMS": "1", "buchungen-0-ort": "", "buchungen-0-von": "2027-08-01",
+            "buchungen-0-bis": "", "buchungen-0-waehrung": "EUR", "buchungen-0-wechselkurs": "1",
+            "buchungen-0-anzahlung": "0", "buchungen-0-status": "geplant", "buchungen-0-preis_pro_nacht": "30",
+        })
+        antwort = self.client.post(reverse("admin:reisen_reise_add"), daten)
+        self.assertEqual(antwort.status_code, 302, antwort.content.decode()[:3000])
+        r = Reise.objects.get()
+        self.assertEqual(r.etappen.count(), 2)
+        self.assertEqual(r.buchungen.count(), 0)
+        seite = self.client.get(reverse("admin:reisen_reise_change", args=[r.pk])).content.decode()
+        self.assertIn("Kraftstoffpreis", seite)
+        self.assertIn("Kraftstoff", seite[seite.index("Berechnet"):])
+
+
+class SucheZuruecksetzenTest(TestCase):
+    def test_knopf_nur_mit_suchbegriff_und_filter_bleibt(self):
+        self.client.force_login(Person.objects.create_superuser("t@example.org", "T", familie=fam()))
+        Ort.objects.create(familie=fam(), name="Seecamping")
+        Ort.objects.create(familie=fam(), name="Bergcamping")
+        url = reverse("admin:orte_ort_changelist")
+        self.assertNotContains(self.client.get(url), "Zurücksetzen")
+        seite = self.client.get(url, {"q": "See", "typ__exact": "camping"})
+        self.assertContains(seite, "Zurücksetzen")
+        self.assertContains(seite, 'href="?typ__exact=camping" class="button suche-zuruecksetzen"')
+        self.assertNotContains(seite, "Bergcamping</a>")
+
+
+class PopupTest(TestCase):
+    def test_skript_in_allen_masken(self):
+        self.client.force_login(Person.objects.create_superuser("t@example.org", "T", familie=fam()))
+        for url in [reverse("admin:orte_ort_add") + "?_to_field=id&_popup=1", reverse("admin:reisen_reise_add")]:
+            with self.subTest(url):
+                self.assertContains(self.client.get(url), "verwaltung/popup.js")
+
+
+class FremdwaehrungTest(TestCase):
+    """Buchungen als Blöcke; Währung und Kurs zählen nur mit Haken „Fremdwährung“."""
+
+    def setUp(self):
+        self.client.force_login(Person.objects.create_superuser("t@example.org", "T", familie=fam()))
+        zuhause = Ort.objects.create(familie=fam(), name="Zuhause", typ="zuhause")
+        self.see = Ort.objects.create(familie=fam(), name="Seecamping")
+        self.r = Reise.objects.create(familie=fam(), titel="Sommer", von=date(2027, 8, 1), bis=date(2027, 8, 5))
+        Etappe.objects.create(reise=self.r, datum=date(2027, 8, 1), von_ort=zuhause, nach_ort=self.see)
+        Etappe.objects.create(reise=self.r, datum=date(2027, 8, 5), von_ort=self.see, nach_ort=zuhause)
+
+    def speichern(self, **buchung):
+        e = list(self.r.etappen.all())
+        daten = leere_inlines(**{
+            "titel": "Sommer", "von": "2027-08-01", "bis": "2027-08-05", "urlaub_von": "", "urlaub_bis": "",
+            "fahrzeugprofil": "", "verbrauch_l_100km": "", "dieselpreis": "1.80", "vignetten_meiden": "",
+            "im_kalender": "on", "notizen": "",
+            "etappen-TOTAL_FORMS": "2", "etappen-INITIAL_FORMS": "2",
+            **{f"etappen-{i}-{k}": v for i, x in enumerate(e) for k, v in
+               {"id": x.pk, "reise": self.r.pk, "datum": x.datum.isoformat(), "von_ort": x.von_ort_id,
+                "nach_ort": x.nach_ort_id, "pause": "0:00"}.items()},
+            "buchungen-TOTAL_FORMS": "1", "buchungen-0-ort": self.see.pk, "buchungen-0-von": "2027-08-01",
+            "buchungen-0-bis": "2027-08-05", "buchungen-0-preis_pro_nacht": "30", "buchungen-0-anzahlung": "0",
+            "buchungen-0-status": "geplant", **{f"buchungen-0-{k}": v for k, v in buchung.items()},
+        })
+        return self.client.post(reverse("admin:reisen_reise_change", args=[self.r.pk]), daten)
+
+    def test_ohne_haken_euro(self):
+        self.assertEqual(self.speichern(waehrung="GBP", wechselkurs="0.85").status_code, 302)
+        b = self.r.buchungen.get()
+        self.assertEqual((b.waehrung, b.wechselkurs), ("EUR", 1))
+
+    def test_mit_haken_fremdwaehrung(self):
+        self.assertEqual(self.speichern(fremdwaehrung="on", waehrung="GBP", wechselkurs="0.85").status_code, 302)
+        b = self.r.buchungen.get()
+        self.assertEqual((b.waehrung, str(b.wechselkurs)), ("GBP", "0.8500"))
+        seite = self.client.get(reverse("admin:reisen_reise_change", args=[self.r.pk])).content.decode()
+        self.assertIn('class="inline-related', seite[seite.index('id="buchungen-group"'):])   # Blöcke
+        self.assertRegex(seite, r'<input type="checkbox" name="buchungen-0-fremdwaehrung"[^>]*checked')
+
+    def test_haken_ohne_waehrung_ist_fehler(self):
+        antwort = self.speichern(fremdwaehrung="on", waehrung="EUR", wechselkurs="1")
+        self.assertEqual(antwort.status_code, 200)
+        self.assertContains(antwort, "Bitte die Fremdwährung angeben")

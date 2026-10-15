@@ -212,7 +212,8 @@ class SchluesselTest(TestCase):
         self.assertIn("…1234", self.client.get(reverse("admin:konten_apischluessel_changelist")).content.decode())
         # Ändern ohne neuen Schlüssel behält den alten
         self.client.post(reverse("admin:konten_apischluessel_change", args=[self.eigener.pk]),
-                         {"name": "Müller", "schluessel": "", "aktiv": "on", "notiz": "neu"})
+                         {"name": "Müller", "schluessel": "", "aktiv": "on", "notiz": "neu",
+                          "kontingent_kacheln": "50000", "kontingent_anfragen": "2500"})
         self.eigener.refresh_from_db()
         self.assertEqual((self.eigener.schluessel, self.eigener.notiz), ("mueller-key-1234", "neu"))
 
@@ -240,3 +241,25 @@ class NutzungZaehlenTest(TestCase):
         if connection.vendor == "postgresql":    # SQLite kennt NULLS NOT DISTINCT nicht
             with self.assertRaises(IntegrityError), transaction.atomic():
                 ApiNutzung.objects.create(datum=timezone.localdate(), familie=f, art="kachel")
+
+    def test_kontingent_je_schluessel_und_tag(self):
+        from django.utils import timezone
+
+        a = Familie.objects.create(name="Eins", bundesland="SH")
+        b = Familie.objects.create(name="Zwei", bundesland="SH")
+        eigener = ApiSchluessel.objects.create(name="Eigener", schluessel="x" * 20, kontingent_anfragen=100)
+        for familie, art in [(a, "routing"), (b, "routing"), (b, "geocoding"), (a, "kachel")]:
+            ApiNutzung.zaehlen(familie, None, art)
+        ApiNutzung.zaehlen(a, eigener, "routing")
+        heute = timezone.localdate()
+        self.assertEqual(ApiNutzung.genutzt(heute, None, "routing"), 3)      # Routing + Suche, beide Familien
+        self.assertEqual(ApiNutzung.genutzt(heute, None, "kachel"), 1)
+        self.assertEqual(ApiNutzung.genutzt(heute, eigener, "geocoding"), 1)
+        self.assertEqual(ApiNutzung.kontingent_von(None, "kachel"), 50000)
+        self.assertEqual(ApiNutzung.kontingent_von(eigener, "routing"), 100)
+        boss = Person.objects.create_user("boss2@example.org", "Boss", familie=a, is_staff=True, is_superuser=True)
+        self.client.force_login(boss)
+        seite = self.client.get(reverse("admin:konten_apinutzung_changelist"))
+        self.assertContains(seite, "3 von 2.500 (0,1 %)")
+        self.assertContains(seite, "1 von 50.000 (0,0 %)")
+        self.assertContains(seite, "1 von 100 (1,0 %)")

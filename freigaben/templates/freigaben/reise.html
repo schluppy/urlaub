@@ -29,7 +29,7 @@
   {% for e in etappen %}
   <tr>
     <td class="nowrap">{{ e.datum|date:"D d.m." }}</td>
-    <td>{{ e.von_ort }} → {{ e.nach_ort }}</td>
+    <td>{% include "reisen/_ort.html" with ort=e.von_ort %} → {% include "reisen/_ort.html" with ort=e.nach_ort %}</td>
     <td class="zahl">{{ e.startzeit|time:"H:i"|default:"–" }}</td>
     <td class="zahl">{% if e.ankunft %}{{ e.ankunft|time:"H:i" }}{% else %}–{% endif %}</td>
     <td class="zahl">{{ e.entfernung_km|km }}</td>

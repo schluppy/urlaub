@@ -58,7 +58,7 @@ class VerbrauchskurveTest(TestCase):
         person = Person.objects.create_user("anna@example.org", "Anna", familie=self.f, is_staff=True)
         self.client.force_login(person)
         seite = self.client.get(reverse("reisen:reise", args=[self.r.pk]))
-        self.assertContains(seite, "Diesel: 88 L (Ø 11,1 L/100 km, 1 von 2 Etappen mit Verbrauchskurve TomTom)")
+        self.assertContains(seite, "Kraftstoff: 88 L (Ø 11,1 L/100 km, 1 von 2 Etappen mit Verbrauchskurve TomTom)")
         ws = load_workbook(BytesIO(excel(self.reise(), stand_jetzt())))["Etappen"]
         self.assertEqual((ws["J2"].value, ws["K2"].value), ("TomTom", 65.4))
         self.assertEqual(ws["K3"].value, '=IF(OR(I3="",J3=""),0,I3*J3/100)')

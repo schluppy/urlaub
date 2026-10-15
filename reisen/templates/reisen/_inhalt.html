@@ -24,7 +24,7 @@
   {% for e in etappen %}
   <tr>
     <td class="nowrap">{{ e.datum|date:"D d.m." }}</td>
-    <td>{{ e.von_ort }} → {{ e.nach_ort }}
+    <td>{% include "reisen/_ort.html" with ort=e.von_ort %} → {% include "reisen/_ort.html" with ort=e.nach_ort %}
       {% if not pdf and e.karten_link %}<a class="klein" href="{{ e.karten_link }}" target="_blank" rel="noopener">Karte</a>{% endif %}
       {% if e.fahrzeugprofil %}<br><span class="leise klein">mit {{ e.fahrzeugprofil }}</span>{% endif %}</td>
     <td class="zahl">{{ e.startzeit|time:"H:i"|default:"–" }}</td>
@@ -81,7 +81,7 @@
   {% for b in balken %}
   <tr><td><i class="farbpunkt" style="background:{{ b.farbe }}"></i>{{ b.name }}</td><td class="zahl">{{ b.betrag|euro }}</td><td class="zahl leise">{{ b.anteil }} %</td></tr>
   {% endfor %}
-  {% if reise.dieselliter %}<tr><td colspan="3" class="leise klein">Diesel: {{ reise.dieselliter|zahl:0 }} L ({{ reise.diesel_quelle }}) × {{ reise.dieselpreis|zahl:3 }} €/L</td></tr>{% endif %}
+  {% if reise.dieselliter %}<tr><td colspan="3" class="leise klein">Kraftstoff: {{ reise.dieselliter|zahl:0 }} L ({{ reise.diesel_quelle }}) × {{ reise.dieselpreis|zahl:3 }} €/L</td></tr>{% endif %}
   {% for k in kosten %}{% if k.notiz %}<tr><td colspan="3" class="leise klein">{{ k.get_art_display }}: {{ k.notiz }} ({{ k.betrag|euro }})</td></tr>{% endif %}{% endfor %}
   </tbody>
   <tfoot><tr><th>Gesamt</th><td class="zahl">{{ reise.gesamtkosten|euro }}</td><td></td></tr></tfoot>

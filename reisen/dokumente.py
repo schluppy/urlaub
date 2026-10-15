@@ -178,13 +178,13 @@ def excel(reise, stand):
     etappen_summe = n_et + 2
     buchung_summe = n_bu + 2
     zeilen = [
-        ("Urlaubstage", reise.urlaubstage or 0, "0", "Mo–Fr ohne Feiertage SH, berechnet"),
+        ("Urlaubstage", reise.urlaubstage or 0, "0", f"Mo–Fr ohne Feiertage {reise.bundesland}, berechnet"),
         ("Fahrzeug", reise.fahrzeugprofil.name if reise.fahrzeugprofil else "–", None, ""),
-        ("Dieselpreis (€/L)", reise.dieselpreis, '0.000 "€"', "Eingabe – ändert die Dieselkosten"),
+        ("Kraftstoffpreis (€/L)", reise.dieselpreis, '0.000 "€"', "Eingabe – ändert die Kraftstoffkosten"),
         ("Entfernung", f"=Etappen!I{etappen_summe}", KM, ""),
         ("Fahrzeit", f"=Etappen!F{etappen_summe}", DAUER, "ohne Pausen"),
-        ("Diesel (Liter)", f"=Etappen!K{etappen_summe}", "0.0", "je Etappe km × L/100 km bzw. Liter laut TomTom-Verbrauchskurve"),
-        ("Diesel", "=ROUND(B9*B6,2)", EURO, ""),
+        ("Kraftstoff (Liter)", f"=Etappen!K{etappen_summe}", "0.0", "je Etappe km × L/100 km bzw. Liter laut TomTom-Verbrauchskurve"),
+        ("Kraftstoff", "=ROUND(B9*B6,2)", EURO, ""),
         ("Übernachtungen", f"=Buchungen!J{buchung_summe}", EURO, ""),
     ]
     for art, label in Kostenart.choices:
