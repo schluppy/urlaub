@@ -50,7 +50,7 @@
   {% for b in buchungen %}{% if b.status != "storniert" %}
   <tr>
     <td>{% if b.ort.website %}<a href="{{ b.ort.website }}" target="_blank" rel="noopener">{{ b.ort }}</a>{% else %}{{ b.ort }}{% endif %}
-      {% if details and b.buchungsnummer %}<br><span class="leise klein">Nr. {{ b.buchungsnummer }}</span>{% endif %}</td>
+      {% if details and b.buchungsnummer %}<br><span class="leise klein">Nr. {{ b.buchungsnummer }}</span>{% endif %}{% if b.stellplatz %}<br><span class="leise klein">Stellplatz {{ b.stellplatz }}</span>{% endif %}</td>
     <td class="nowrap">{{ b.von|date:"D d.m." }} – {{ b.bis|date:"D d.m." }}</td>
     <td class="zahl">{{ b.naechte }}</td>
     {% if details %}<td class="zahl">{{ b.summe_eur|euro }}</td><td><span class="status {{ b.status }}">{{ b.get_status_display }}</span></td>{% endif %}

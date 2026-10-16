@@ -201,7 +201,7 @@ class PopupTest(TestCase):
 
 
 class FremdwaehrungTest(TestCase):
-    """Buchungen als Blöcke; Währung und Kurs zählen nur mit Haken „Fremdwährung“."""
+    """Buchungen als Blöcke; Währung und Kurs zählen nur mit Haken „Fremdwährung“; Stellplatz."""
 
     def setUp(self):
         self.client.force_login(Person.objects.create_superuser("t@example.org", "T", familie=fam()))
@@ -244,3 +244,18 @@ class FremdwaehrungTest(TestCase):
         antwort = self.speichern(fremdwaehrung="on", waehrung="EUR", wechselkurs="1")
         self.assertEqual(antwort.status_code, 200)
         self.assertContains(antwort, "Bitte die Fremdwährung angeben")
+
+    def test_stellplatz_eingabe_seite_excel(self):
+        from io import BytesIO
+
+        from openpyxl import load_workbook
+
+        from reisen.dokumente import excel, stand_jetzt
+
+        antwort = self.speichern(buchungsnummer="A-1", stellplatz="47", waehrung="EUR", wechselkurs="1")
+        self.assertEqual(antwort.status_code, 302)
+        self.assertEqual(self.r.buchungen.get().stellplatz, "47")
+        self.assertContains(self.client.get(reverse("reisen:reise", args=[self.r.pk])), "Nr. A-1 · Stellplatz 47")
+        ws = load_workbook(BytesIO(excel(Reise.objects.get(pk=self.r.pk), stand_jetzt())))["Buchungen"]
+        self.assertEqual((ws["P1"].value, ws["Q1"].value, ws["Q2"].value, ws["R1"].value),
+                         ("Buchungsnr.", "Stellplatz", "47", "Website"))

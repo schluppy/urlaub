@@ -84,7 +84,8 @@ class BuchungForm(forms.ModelForm):
                    "anzahlung": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
                    "preis_pro_nacht": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
                    "gesamtpreis": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
-                   "buchungsnummer": forms.TextInput(attrs={"size": 14})}
+                   "buchungsnummer": forms.TextInput(attrs={"size": 14}),
+                   "stellplatz": forms.TextInput(attrs={"size": 10})}
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -107,7 +108,7 @@ class BuchungInline(FamilienMixin, PickerMixin, admin.StackedInline):
     form = BuchungForm
     extra = 0
     fieldsets = [(None, {"fields": [
-        ("ort", "von", "bis", "status", "buchungsnummer"),
+        ("ort", "von", "bis", "status", "buchungsnummer", "stellplatz"),
         ("preis_pro_nacht", "gesamtpreis", "anzahlung", "rest_faellig_am", "fremdwaehrung"),
         ("waehrung", "wechselkurs"),          # nur sichtbar mit Haken „Fremdwährung“ (eingabe.js)
         "summe_anzeige",

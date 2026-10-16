@@ -69,7 +69,8 @@ def restzahlungen(heute, familie, vorlauf=REST_VORLAUF_TAGE):
             art="rest", datum=b.rest_faellig_am, titel=titel, reise=b.reise, dringend=stufe == "faellig",
             zeilen=[f"{_rest_text(b)} bis {b.rest_faellig_am:%d.%m.%Y}",
                     f"{b.reise.titel}, {b.von:%d.%m.}–{b.bis:%d.%m.%Y}"
-                    + (f", Buchungsnr. {b.buchungsnummer}" if b.buchungsnummer else "")]
+                    + (f", Buchungsnr. {b.buchungsnummer}" if b.buchungsnummer else "")
+                    + (f", Stellplatz {b.stellplatz}" if b.stellplatz else "")]
             + ([f"Website: {b.ort.website}"] if b.ort.website else []),
             schluessel=f"rest-{b.pk}-{b.rest_faellig_am:%Y%m%d}-{stufe}"))
     return punkte

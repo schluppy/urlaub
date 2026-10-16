@@ -372,6 +372,7 @@ class Buchung(models.Model):
     status = models.CharField("Status", max_length=12, choices=Buchungsstatus.choices,
                               default=Buchungsstatus.GEPLANT)
     buchungsnummer = models.CharField("Buchungsnr.", max_length=60, blank=True)
+    stellplatz = models.CharField("Stellplatz", max_length=40, blank=True, help_text="z. B. Platz 47 oder Parzelle B12")
     notiz = models.CharField("Notiz", max_length=200, blank=True)
 
     class Meta:

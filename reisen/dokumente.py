@@ -119,8 +119,8 @@ def excel(reise, stand):
     bu = wb.create_sheet("Buchungen")
     _kopfzeile(bu, ["Ort", "Anreise", "Abreise", "Nächte", "Preis/Nacht", "Gesamtpreis", "Summe", "Währung",
                     "Kurs (1 € =)", "Summe €", "Anzahlung", "Rest", "Rest €", "Rest fällig", "Status",
-                    "Buchungsnr.", "Website"],
-               [30, 12, 12, 8, 11, 10, 11, 8, 10, 12, 11, 11, 12, 12, 11, 16, 10])
+                    "Buchungsnr.", "Stellplatz", "Website"],
+               [30, 12, 12, 8, 11, 10, 11, 8, 10, 12, 11, 11, 12, 12, 11, 16, 12, 10])
     buchungen = list(reise.buchungen.all())
     for i, b in enumerate(buchungen, start=2):
         # Summe: Gesamtpreis, wenn eingetragen, sonst Nächte × Preis/Nacht
@@ -128,10 +128,10 @@ def excel(reise, stand):
                    f'=IF(F{i}<>"",F{i},D{i}*E{i})',
                    b.waehrung, b.wechselkurs, f"=ROUND(G{i}/I{i},2)", b.anzahlung, f"=G{i}-K{i}",
                    f"=ROUND(L{i}/I{i},2)", b.rest_faellig_am, b.get_status_display(), b.buchungsnummer,
-                   "Website" if b.ort.website else ""])
+                   b.stellplatz, "Website" if b.ort.website else ""])
         if b.ort.website:
-            bu[f"Q{i}"].hyperlink = b.ort.website
-            bu[f"Q{i}"].style = "Hyperlink"
+            bu[f"R{i}"].hyperlink = b.ort.website
+            bu[f"R{i}"].style = "Hyperlink"
     _formate(bu, len(buchungen), {"B": DATUM, "C": DATUM, "E": ZAHL2, "F": ZAHL2, "G": ZAHL2, "I": "0.0000",
                                   "J": EURO, "K": ZAHL2, "L": ZAHL2, "M": EURO, "N": DATUM})
     n_bu = len(buchungen)
@@ -144,7 +144,7 @@ def excel(reise, stand):
     bu[f"M{s}"] = (f'=SUMIF({_bereich("O", n_bu)},"<>{storno}",{_bereich("M", n_bu)})'
                    f'-SUMIF({_bereich("O", n_bu)},"{bezahlt}",{_bereich("M", n_bu)})')
     bu[f"J{s}"].number_format = bu[f"M{s}"].number_format = EURO
-    for sp in "ABCDEFGHIJKLMNOPQ":
+    for sp in "ABCDEFGHIJKLMNOPQR":
         bu[f"{sp}{s}"].font, bu[f"{sp}{s}"].border = FETT, LINIE_OBEN
 
     # Weitere Kosten
