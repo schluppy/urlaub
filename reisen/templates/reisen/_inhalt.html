@@ -15,6 +15,22 @@
 {% if not pdf and karte.orte %}{% include "reisen/_karte.html" with tomtom=True %}{% endif %}
 
 <h2>Etappen</h2>
+{% if not pdf %}{% with routen=reise.gesamtrouten %}{% if routen %}
+<div class="gesamtroute flaeche">
+  <h3>Gesamtroute</h3>
+  <ul>
+  {% for g in routen %}
+    <li><span class="name">{{ g.name }}</span> <span class="leise klein">{{ g.zeitraum }} · {{ g.orte|length }} Orte</span>
+      <span class="links">
+      {% if g.ohne_koordinaten %}<span class="leise klein">Koordinaten fehlen: {{ g.ohne_koordinaten|join:", " }}</span>
+      {% else %}<a href="{{ g.adac_link }}" target="_blank" rel="noopener" title="Route mit Maut in ADAC Maps">ADAC</a>
+        {% if g.google_link %}· <a href="{{ g.google_link }}" target="_blank" rel="noopener">Google Maps</a>
+        {% else %}<span class="leise klein">· Google Maps: zu viele Orte</span>{% endif %}
+      {% endif %}</span></li>
+  {% endfor %}
+  </ul>
+</div>
+{% endif %}{% endwith %}{% endif %}
 {% if etappen %}
 <div class="tabelle-rahmen">
 <table class="liste">

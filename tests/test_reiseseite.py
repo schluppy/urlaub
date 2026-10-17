@@ -202,3 +202,56 @@ class AdacLinkTest(TestCase):
         self.client.force_login(Person.objects.create_user("a@example.org", "A", familie=f, is_staff=True))
         seite = self.client.get(reverse("reisen:reise", args=[r.pk]))
         self.assertContains(seite, 'title="Route mit Maut in ADAC Maps">ADAC</a>')
+
+
+class GesamtrouteTest(TestCase):
+    """Abschnitte für ADAC/Google: Aufteilung an Fähren, Google nur bis 9 Zwischenziele."""
+
+    def setUp(self):
+        self.f = fam()
+        n = iter(range(100))
+
+        def ort(name, typ="camping"):
+            i = next(n)
+            return Ort.objects.create(familie=self.f, name=name, typ=typ,
+                                      breite=Decimal("50") + Decimal(i) / 10, laenge=Decimal("5") + Decimal(i) / 10)
+
+        self.ort = ort
+        self.heim, self.hafen_a, self.hafen_b = ort("Heim", "zuhause"), ort("Hafen A", "faehre"), ort("Hafen B", "faehre")
+        self.r = Reise.objects.create(familie=self.f, titel="Insel", von=date(2027, 8, 1), bis=date(2027, 8, 31))
+
+    def etappen(self, *orte):
+        for tag, (von, nach) in enumerate(zip(orte, orte[1:]), start=1):
+            Etappe.objects.create(reise=self.r, datum=date(2027, 8, tag), von_ort=von, nach_ort=nach)
+
+    def test_aufteilung_an_der_faehre(self):
+        a, b = self.ort("Platz 1"), self.ort("Platz 2")
+        # Heim → Hafen A | Fähre (Lücke) | Hafen B → Platz 1 → Platz 2 → Hafen B | Hafen A → Heim
+        for tag, (von, nach) in enumerate([(self.heim, self.hafen_a), (self.hafen_b, a), (a, b), (b, self.hafen_b),
+                                           (self.hafen_a, self.heim)], start=1):
+            Etappe.objects.create(reise=self.r, datum=date(2027, 8, tag), von_ort=von, nach_ort=nach)
+        routen = Reise.objects.get(pk=self.r.pk).gesamtrouten()
+        self.assertEqual([g.name for g in routen], ["Rundreise ab Hafen B"])   # Ein-Etappen-Abschnitte entfallen
+        g = routen[0]
+        self.assertEqual([o.name for o in g.orte], ["Hafen B", "Platz 1", "Platz 2", "Hafen B"])
+        self.assertTrue(g.adac_link.startswith("https://maps.adac.de/route?places=50.20000_5.20000_6_0,"))
+        self.assertTrue(g.adac_link.endswith("50.20000_5.20000_6_0&vehicle-type=trailer"))
+        self.assertIn("&waypoints=50.300000,5.300000%7C50.400000,5.400000&", g.google_link)
+
+    def test_ueberfahrt_als_etappe_gehoert_zu_keinem_abschnitt(self):
+        a, b = self.ort("Platz 1"), self.ort("Platz 2")
+        self.etappen(self.heim, a, self.hafen_a, self.hafen_b, b, self.heim)
+        self.assertEqual([[o.name for o in g.orte] for g in Reise.objects.get(pk=self.r.pk).gesamtrouten()],
+                         [["Heim", "Platz 1", "Hafen A"], ["Hafen B", "Platz 2", "Heim"]])
+
+    def test_zu_viele_orte_fuer_google_und_anzeige(self):
+        plaetze = [self.ort(f"Platz {i}") for i in range(11)]           # Heim + 11 + Heim = 11 Zwischenziele
+        self.etappen(self.heim, *plaetze, self.heim)
+        g = Reise.objects.get(pk=self.r.pk).gesamtrouten()[0]
+        self.assertTrue(g.zu_viele_fuer_google)
+        self.assertEqual(g.google_link, "")
+        self.assertTrue(g.adac_link)
+        self.client.force_login(Person.objects.create_user("a@example.org", "A", familie=self.f, is_staff=True))
+        seite = self.client.get(reverse("reisen:reise", args=[self.r.pk]))
+        self.assertContains(seite, "Rundreise ab Heim")
+        self.assertContains(seite, "Google Maps: zu viele Orte")

@@ -4,11 +4,13 @@ from django.db.models import Count, Max, Q
 from konten.mandant import FamilienMixin
 from reisen.routing import TomTomFehler, ort_geocodieren
 
+from .forms import OrtForm
 from .models import Ort
 
 
 @admin.register(Ort)
 class OrtAdmin(FamilienMixin, admin.ModelAdmin):
+    form = OrtForm
     list_display = ["name", "typ", "sterne_anzeige", "aufenthalte", "zuletzt", "land", "hat_koordinaten"]
     list_filter = ["typ", "bewertung", "land"]
     radio_fields = {"bewertung": admin.HORIZONTAL}
@@ -16,10 +18,12 @@ class OrtAdmin(FamilienMixin, admin.ModelAdmin):
     actions = ["koordinaten_ermitteln"]
     fieldsets = [
         (None, {"fields": ["name", "typ", "bewertung", "adresse", "land", "website"]}),
-        ("Koordinaten", {"fields": [("breite", "laenge")],
+        ("Koordinaten", {"fields": ["google", ("breite", "laenge")],
                          "description": "Bleiben die Felder leer, ermittelt TomTom sie beim Speichern aus der "
-                                        "Adresse. Zum Neuberechnen beide Felder leeren oder die Aktion "
-                                        "„Koordinaten aus Adresse ermitteln“ in der Liste nutzen."}),
+                                        "Adresse. Findet TomTom den Ort nicht richtig, den Link aus Google Maps "
+                                        "einfügen oder Breite und Länge von Hand eintragen. Zum Neuberechnen aus "
+                                        "der Adresse beide Felder leeren oder die Aktion „Koordinaten aus Adresse "
+                                        "ermitteln“ in der Liste nutzen."}),
         ("Preise und Notizen", {"fields": ["preise", "notizen"]}),
     ]
 
@@ -46,6 +50,10 @@ class OrtAdmin(FamilienMixin, admin.ModelAdmin):
         return obj.hat_koordinaten
 
     def save_model(self, request, obj, form, change):
+        if getattr(form, "von_google", False):     # Koordinaten aus Google Maps gehen vor TomTom
+            super().save_model(request, obj, form, change)
+            messages.info(request, f"Koordinaten aus Google Maps übernommen: {obj.breite}, {obj.laenge}.")
+            return
         adresse_neu = change and "adresse" in form.changed_data and not \
             {"breite", "laenge"} & set(form.changed_data)
         if obj.adresse and (not obj.hat_koordinaten or adresse_neu):

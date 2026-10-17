@@ -204,6 +204,10 @@ class Reise(models.Model):
                 ergebnis.append((ort, etappe.datum, abfahrt))
         return ergebnis
 
+    def gesamtrouten(self):
+        """Abschnitte der Reise als Links für ADAC Maps und Google Maps (siehe Gesamtroute unten)."""
+        return [Gesamtroute(a, self.fahrzeugprofil) for a in abschnitte(self._etappen()) if len(a) >= 2]
+
     @property
     def hauptort(self):
         """Haupturlaubsort: Platz mit den meisten Nächten – ohne Zwischenübernachtungen, Fähren und Zuhause.
@@ -354,6 +358,66 @@ class Etappe(models.Model):
         if self.startzeit is None or self.fahrzeit is None:
             return None
         return datetime.combine(self.datum, self.startzeit) + self.fahrzeit + (self.pause or timedelta())
+
+
+# --- Gesamtroute: mehrere Etappen in einem Link -------------------------------
+
+GOOGLE_MAX_ZWISCHENZIELE = 9    # mehr nimmt Google Maps in der Adresse nicht an
+
+
+def abschnitte(etappen):
+    """Etappen in zusammenhängende Abschnitte teilen. Ein neuer Abschnitt beginnt, wo eine Etappe nicht
+    am Ziel der vorigen startet – so ist eine Fähre eingetragen (Etappe endet am Abfahrtshafen, die
+    nächste beginnt am Ankunftshafen). Eine Etappe von Fährterminal zu Fährterminal ist die Überfahrt
+    selbst und gehört zu keinem Abschnitt."""
+    teile, aktuell = [], []
+    for e in etappen:
+        ueberfahrt = e.von_ort.typ == Ortstyp.FAEHRE and e.nach_ort.typ == Ortstyp.FAEHRE
+        if aktuell and (ueberfahrt or e.von_ort_id != aktuell[-1].nach_ort_id):
+            teile.append(aktuell)
+            aktuell = []
+        if not ueberfahrt:
+            aktuell.append(e)
+    if aktuell:
+        teile.append(aktuell)
+    return teile
+
+
+class Gesamtroute:
+    def __init__(self, etappen, fahrzeugprofil=None):
+        self.etappen = etappen
+        orte = [etappen[0].von_ort]
+        for e in etappen:
+            if e.nach_ort_id != orte[-1].pk:
+                orte.append(e.nach_ort)
+        self.orte = orte
+        self.rundreise = orte[0].pk == orte[-1].pk
+        self.name = f"Rundreise ab {orte[0]}" if self.rundreise else f"{orte[0]} → {orte[-1]}"
+        self.zeitraum = f"{etappen[0].datum:%d.%m.} – {etappen[-1].datum:%d.%m.}"
+        self.ohne_koordinaten = [o for o in orte if not o.hat_koordinaten]
+        fahrzeug = etappen[0].fahrzeug or fahrzeugprofil
+        self.art = fahrzeug.art if fahrzeug else "trailer"
+
+    @property
+    def adac_link(self):
+        """ADAC Maps: Punkte als lat_lon_6_0 hintereinander (so auch in längeren Routen von maps.adac.de)."""
+        if self.ohne_koordinaten:
+            return ""
+        punkte = ",".join(f"{o.breite:.5f}_{o.laenge:.5f}_6_0" for o in self.orte)
+        return f"https://maps.adac.de/route?places={punkte}&vehicle-type={self.art}"
+
+    @property
+    def zu_viele_fuer_google(self):
+        return len(self.orte) - 2 > GOOGLE_MAX_ZWISCHENZIELE
+
+    @property
+    def google_link(self):
+        if self.ohne_koordinaten or self.zu_viele_fuer_google:
+            return ""
+        zwischen = "%7C".join(o.koordinaten for o in self.orte[1:-1])
+        return ("https://www.google.com/maps/dir/?api=1"
+                f"&origin={self.orte[0].koordinaten}&destination={self.orte[-1].koordinaten}"
+                + (f"&waypoints={zwischen}" if zwischen else "") + "&travelmode=driving")
 
 
 class Buchungsstatus(models.TextChoices):

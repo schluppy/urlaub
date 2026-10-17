@@ -208,3 +208,13 @@ dl.begriffe dd, dl.fragen dd { margin: 0.15rem 0 0 0; }
 .anleitung-seite .nach-oben { margin: 1.5rem 0 0; font-size: 0.85rem; }
 .anleitung-seite .nach-oben a { color: var(--grau); text-decoration: none; }
 .anleitung-seite .nach-oben a:hover { color: var(--blau); text-decoration: underline; }
+
+/* Gesamtroute über den Etappen */
+.gesamtroute h3 { margin: 0 0 0.3rem; font-size: 1.05rem; }
+.gesamtroute ul { list-style: none; margin: 0; padding: 0; }
+.gesamtroute li { display: flex; flex-wrap: wrap; gap: 0.1rem 0.6rem; align-items: baseline; padding: 0.25rem 0; }
+.gesamtroute li + li { border-top: 1px solid var(--linie); }
+.gesamtroute .name { font-weight: 600; }
+.gesamtroute .links { margin-left: auto; white-space: nowrap; }
+.anleitung-seite table.ortstypen ul { margin: 0; padding-left: 1.1rem; }
+.anleitung-seite section .tabelle-rahmen { margin: 0.6rem 0; }

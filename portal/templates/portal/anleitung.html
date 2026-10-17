@@ -23,8 +23,10 @@ von Anfang an. Du musst nichts über Technik wissen.</p>
     <ol>
       <li><a href="#fahrzeug">Fahrzeugprofil anlegen</a></li>
       <li><a href="#orte">Zuhause und Campingplätze anlegen</a></li>
+      <li><a href="#ortstypen">Welcher Typ für welchen Ort?</a></li>
       <li><a href="#reise">Eine Reise anlegen</a></li>
       <li><a href="#etappen">Etappen eintragen</a></li>
+      <li><a href="#faehre">Eine Fähre eintragen</a></li>
       <li><a href="#route">Route berechnen lassen</a></li>
       <li><a href="#buchungen">Übernachtungen eintragen</a></li>
       <li><a href="#kosten">Weitere Kosten und Links</a></li>
@@ -136,7 +138,8 @@ Eine Einladungsmail gibt es nicht – sag der neuen Person einfach Bescheid, das
   <dt>Ort</dt>
   <dd>Jeder Ort, an dem eine Etappe beginnt oder endet: euer <b>Zuhause</b>, ein <b>Campingplatz</b>, eine
       <b>Zwischenübernachtung</b> (eine Nacht auf dem Weg), ein <b>Fährterminal</b> oder <b>Sonstiges</b>.
-      Orte legt ihr einmal an und nutzt sie in allen Reisen.</dd>
+      Orte legt ihr einmal an und nutzt sie in allen Reisen. Der Typ ist wichtig – siehe
+      <a href="#ortstypen">Welcher Typ für welchen Ort?</a></dd>
   <dt>Fahrzeugprofil</dt>
   <dd>Die Maße und der Verbrauch eures Gespanns oder Wohnmobils – für Routen und Kraftstoffkosten.</dd>
   <dt>Hinweise</dt>
@@ -186,6 +189,57 @@ anlegen, dann <a href="#reise">Reise</a> → <a href="#etappen">Etappen</a> → 
   und gleich ausgewählt.</p>
   <p>In der Liste der Orte hilft die <b>Suche</b> oben; mit <b>„✕ Zurücksetzen“</b> siehst du wieder alle.</p>
 </div>
+<div class="tipp">
+  <p><b>Ort falsch auf der Karte?</b> Manchmal findet die Adresssuche einen Platz nicht genau. Dann den Ort in
+  <b>Google Maps</b> suchen und die Koordinaten übernehmen – im Ort unter <b>Koordinaten</b> ins Feld <b>„Google Maps“</b>:</p>
+  <ul>
+    <li><b>am genauesten:</b> in Google Maps mit der rechten Maustaste (am Handy: lange tippen) genau auf die Einfahrt
+        klicken und oben auf die Zahlen wie „50.1110033, -3.2225803“ – sie sind dann kopiert – und einfügen;</li>
+    <li><b>oder</b> den Link aus Google Maps einfügen: Ort anklicken → <b>„Teilen“</b> → <b>„Link kopieren“</b>.
+        Der Link zeigt manchmal nur ungefähr auf den Platz.</li>
+  </ul>
+  <p>Beim Sichern stehen die Werte in Breite und Länge. Die kannst du auch weiterhin von Hand eintragen. Danach bei der
+  Reise einmal „Route aktualisieren“.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="ortstypen">
+<h3>Welcher Typ für welchen Ort?</h3>
+<p>Der <b>Typ</b> eines Orts entscheidet, wie der Urlaubsplaner mit ihm rechnet. Es lohnt sich also, ihn richtig zu wählen.</p>
+<div class="tabelle-rahmen">
+<table class="liste ortstypen">
+  <thead><tr><th>Typ</th><th>Wofür</th><th>Was das bewirkt</th></tr></thead>
+  <tbody>
+    <tr><td><i class="farbpunkt rund" style="background:#173F73"></i><b>Zuhause</b></td>
+        <td>Start und Ende eurer Reisen. Einmal anlegen.</td>
+        <td><ul><li>keine Übernachtung</li>
+                <li>in geteilten Links <b>nie zu sehen</b> – die Route beginnt dort erst einige Kilometer entfernt</li>
+                <li>nie als Link zur Website</li></ul></td></tr>
+    <tr><td><i class="farbpunkt rund" style="background:#E39226"></i><b>Campingplatz</b></td>
+        <td>Plätze, auf denen ihr Urlaub macht.</td>
+        <td><ul><li>wird als Übernachtung vorgeschlagen</li>
+                <li>kann <b>Haupturlaubsort</b> werden: Der Platz mit den meisten Nächten steht im Google Kalender als Ort</li></ul></td></tr>
+    <tr><td><i class="farbpunkt rund" style="background:#8A4F9E"></i><b>Zwischen&shy;übernachtung</b></td>
+        <td>Eine Nacht auf dem Weg, z. B. Stellplatz oder Campingplatz an der Autobahn.</td>
+        <td><ul><li>wird als Übernachtung vorgeschlagen</li>
+                <li>wird <b>nie Haupturlaubsort</b> – auch wenn es mal zwei Nächte sind</li></ul></td></tr>
+    <tr><td><i class="farbpunkt rund" style="background:#1F6F8B"></i><b>Fährterminal</b></td>
+        <td>Abfahrts- und Ankunftshafen einer Fähre.</td>
+        <td><ul><li>so tragt ihr eine Fähre ein – siehe <a href="#faehre">Eine Fähre eintragen</a></li>
+                <li>wird <b>nie Haupturlaubsort</b></li>
+                <li>teilt die <a href="#route">Gesamtroute</a> in Abschnitte vor und nach der Fähre</li></ul></td></tr>
+    <tr><td><i class="farbpunkt rund" style="background:#5F6875"></i><b>Sonstiges</b></td>
+        <td>Alles andere, z. B. ein Besuch bei Freunden.</td>
+        <td><ul><li>wird wie ein Campingplatz behandelt</li></ul></td></tr>
+  </tbody>
+</table>
+</div>
+<p class="leise klein">Die Farben sind die der Punkte auf der Karte.</p>
+<div class="tipp">
+  <p><b>Faustregel:</b> Wo ihr Urlaub macht, ist ein <b>Campingplatz</b>. Wo ihr nur auf der Durchreise schlaft, ist eine
+  <b>Zwischenübernachtung</b>. Den Typ kannst du jederzeit unter <b>Bearbeiten → Orte</b> ändern; die Reisen passen sich an.</p>
+</div>
 </section>
 
 <p class="nach-oben"><a href="#">↑ nach oben</a></p>
@@ -227,6 +281,27 @@ anlegen, dann <a href="#reise">Reise</a> → <a href="#etappen">Etappen</a> → 
 </section>
 
 <p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="faehre">
+<h3>Eine Fähre eintragen</h3>
+<p>Eine Fähre ist <b>keine eigene Etappe</b>. Stattdessen endet eine Etappe am Abfahrtshafen, und die nächste beginnt am Ankunftshafen.</p>
+<ol class="schritte">
+  <li>Beide Häfen als Orte mit dem Typ <b>Fährterminal</b> anlegen, z. B. „Fähre Kiel“ und „Fähre Oslo“,
+      jeweils mit der Adresse des Terminals.</li>
+  <li>Etappe <b>zur Fähre</b>: Von „Zuhause“ Nach „Fähre Kiel“, am Tag der Abfahrt.</li>
+  <li>Etappe <b>nach der Fähre</b>: Von „Fähre Oslo“ Nach dem ersten Campingplatz – bei einer Nachtfähre mit dem Datum des nächsten Tages.</li>
+  <li>Für die Rückfahrt genauso: Etappe zum Hafen, nächste Etappe ab dem Hafen auf der anderen Seite.</li>
+</ol>
+<div class="tipp">
+  <ul>
+    <li><b>Nachtfähre:</b> Die Nacht an Bord erscheint als Übernachtung am Abfahrtshafen. Die Kabine könnt ihr dort als
+        Buchung eintragen – oder ihr lasst es; dann steht bei den Hinweisen „Nächte ohne Buchung … z. B. Fähre“.</li>
+    <li>Den <b>Preis der Fähre</b> tragt ihr unter <a href="#kosten">Kostenpositionen</a> mit der Art „Fähre“ ein.</li>
+    <li>Eine Fähre bei der Etappe selbst (z. B. eine kurze Flussfähre auf der Strecke) erkennt die Route von allein.</li>
+  </ul>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
 <section id="route">
 <h3>Route berechnen lassen</h3>
 <p>Auf der Reiseseite (oder in der Eingabe oben rechts) auf <b>„Route aktualisieren“</b> klicken. Der Urlaubsplaner
@@ -243,6 +318,11 @@ Linien auf der Karte bedeuten: Für diese Etappe gibt es noch keine Route.</p>
   <li><b>Karte</b> – die Strecke in Google Maps, z. B. zum Weiterschicken oder fürs Handy-Navi.</li>
   <li><b>ADAC</b> – die Strecke in ADAC Maps, passend zur Art eures Fahrzeugs (Gespann oder Wohnmobil).</li>
 </ul>
+<p>Über den Etappen steht außerdem die <b>Gesamtroute</b>: alle Etappen hintereinander als ein Link für ADAC Maps und
+Google Maps, ebenfalls in einem neuen Fenster. Bei einer Reise mit Fähre gibt es einen Abschnitt je Seite der Fähre,
+z. B. „Rundreise ab Fähre Oslo“ für die Tage in Norwegen; Abschnitte mit nur einer Etappe entfallen, die
+stehen ja schon bei der Etappe. Google Maps nimmt höchstens 11 Orte – bei mehr steht dort „zu viele Orte“, und es
+bleibt der ADAC-Link.</p>
 <div class="tipp">
   <p><b>Maut berechnen mit ADAC Maps:</b> Der Urlaubsplaner kennt Vignetten und Fähren, aber nicht die Höhe der Maut.
   Die zeigt <a href="https://maps.adac.de/" target="_blank" rel="noopener">ADAC Maps</a>: Dort lässt sich die Route

@@ -71,3 +71,69 @@ class OrteTest(TestCase):
         self.client.logout()
         oeffentlich = self.client.get(reverse("freigaben:ansehen", args=[f.token])).content.decode()
         self.assertNotIn("★", oeffentlich)
+
+
+GOOGLE_LANG = ("https://www.google.com/maps/place/Faehrhafen/@50.1110033,-3.2225803,17z/data=!3m1!4b1!4m6!3m5"
+               "!1s0x0:0x0!8m2!3d50.111!4d-3.22!16s%2Fg%2F11x?entry=tts")
+
+
+class GoogleKoordinatenTest(TestCase):
+    def test_lesen(self):
+        from unittest import mock
+
+        from orte.google import KeineKoordinaten, koordinaten
+
+        D = Decimal
+        self.assertEqual(koordinaten(GOOGLE_LANG), (D("50.111000"), D("-3.220000")))          # Stecknadel, nicht @
+        self.assertEqual(koordinaten("https://www.google.de/maps/@47.1234567,8.7654321,15z"),
+                         (D("47.123457"), D("8.765432")))                                       # nur Kartenmitte
+        self.assertEqual(koordinaten("https://maps.google.com/?q=47.5,-3.25"), (D("47.5"), D("-3.25")))
+        self.assertEqual(koordinaten("50.1110033, -3.2225803"), (D("50.111003"), D("-3.222580")))
+        self.assertEqual(koordinaten("50.1110033 -3.2225803"), (D("50.111003"), D("-3.222580")))
+        with mock.patch("orte.google.requests.get") as get:
+            get.return_value = mock.Mock(status_code=302, headers={"Location": GOOGLE_LANG})
+            self.assertEqual(koordinaten("https://maps.app.goo.gl/AbCdEf123"), (D("50.111"), D("-3.22")))
+            get.assert_called_once()
+            self.assertFalse(get.call_args.kwargs["allow_redirects"])
+        for falsch in ["https://example.org/@52.1,6.2,3z", "irgendwas", "https://www.google.com/maps",
+                       "95.0, 10.0"]:
+            with self.subTest(falsch), self.assertRaises(KeineKoordinaten):
+                koordinaten(falsch)
+        with mock.patch("orte.google.requests.get") as get:                 # lange Adressen werden nie abgerufen
+            koordinaten(GOOGLE_LANG)
+            get.assert_not_called()
+
+
+class OrtKoordinatenEingabeTest(TestCase):
+    def setUp(self):
+        self.familie = fam()
+        self.client.force_login(Person.objects.create_user("t@example.org", "T", familie=self.familie, is_staff=True))
+        self.ort = Ort.objects.create(familie=self.familie, name="Hafen", typ="faehre", adresse="Hafenstraße 1")
+
+    def senden(self, **felder):
+        daten = {"name": "Hafen", "typ": "faehre", "bewertung": "", "adresse": "Hafenstraße 1", "land": "",
+                 "website": "", "breite": "", "laenge": "", "google": "", "preise": "", "notizen": "", **felder}
+        return self.client.post(reverse("admin:orte_ort_change", args=[self.ort.pk]), daten)
+
+    def test_von_hand_mit_sieben_stellen_und_komma(self):
+        from unittest import mock
+
+        with mock.patch("orte.admin.ort_geocodieren") as tomtom:
+            self.assertEqual(self.senden(breite="50,1110033", laenge="-3.2225803").status_code, 302)
+            tomtom.assert_not_called()
+        self.ort.refresh_from_db()
+        self.assertEqual((self.ort.breite, self.ort.laenge), (Decimal("50.111003"), Decimal("-3.222580")))
+
+    def test_google_link_geht_vor_tomtom_und_handeingabe(self):
+        from unittest import mock
+
+        with mock.patch("orte.admin.ort_geocodieren") as tomtom:
+            antwort = self.senden(google=GOOGLE_LANG, adresse="Neue Adresse 2", breite="1", laenge="2")
+            self.assertEqual(antwort.status_code, 302)
+            tomtom.assert_not_called()                                   # trotz geänderter Adresse
+        self.ort.refresh_from_db()
+        self.assertEqual((self.ort.breite, self.ort.laenge), (Decimal("50.111"), Decimal("-3.22")))
+
+    def test_fehler_bleiben_im_formular(self):
+        self.assertContains(self.senden(google="https://example.org/x"), "Das ist kein Link aus Google Maps.")
+        self.assertContains(self.senden(breite="52.1"), "Bitte Breite und Länge eintragen")
