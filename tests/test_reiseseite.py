@@ -202,6 +202,9 @@ class AdacLinkTest(TestCase):
         self.client.force_login(Person.objects.create_user("a@example.org", "A", familie=f, is_staff=True))
         seite = self.client.get(reverse("reisen:reise", args=[r.pk]))
         self.assertContains(seite, 'title="Route mit Maut in ADAC Maps">ADAC</a>')
+        inhalt = seite.content.decode()
+        self.assertLess(inhalt.index('title="Route in Google Maps">Google</a>'), inhalt.index(">ADAC</a>"))   # erst Google
+        self.assertNotIn(">Karte</a>", inhalt)
 
 
 class GesamtrouteTest(TestCase):
@@ -254,4 +257,4 @@ class GesamtrouteTest(TestCase):
         self.client.force_login(Person.objects.create_user("a@example.org", "A", familie=self.f, is_staff=True))
         seite = self.client.get(reverse("reisen:reise", args=[self.r.pk]))
         self.assertContains(seite, "Rundreise ab Heim")
-        self.assertContains(seite, "Google Maps: zu viele Orte")
+        self.assertContains(seite, "Google: zu viele Orte")

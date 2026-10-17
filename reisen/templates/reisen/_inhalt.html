@@ -23,9 +23,9 @@
     <li><span class="name">{{ g.name }}</span> <span class="leise klein">{{ g.zeitraum }} · {{ g.orte|length }} Orte</span>
       <span class="links">
       {% if g.ohne_koordinaten %}<span class="leise klein">Koordinaten fehlen: {{ g.ohne_koordinaten|join:", " }}</span>
-      {% else %}<a href="{{ g.adac_link }}" target="_blank" rel="noopener" title="Route mit Maut in ADAC Maps">ADAC</a>
-        {% if g.google_link %}· <a href="{{ g.google_link }}" target="_blank" rel="noopener">Google Maps</a>
-        {% else %}<span class="leise klein">· Google Maps: zu viele Orte</span>{% endif %}
+      {% else %}{% if g.google_link %}<a href="{{ g.google_link }}" target="_blank" rel="noopener" title="Route in Google Maps">Google</a>
+        {% else %}<span class="leise klein" title="Google Maps nimmt höchstens 11 Orte">Google: zu viele Orte</span>{% endif %}
+        · <a href="{{ g.adac_link }}" target="_blank" rel="noopener" title="Route mit Maut in ADAC Maps">ADAC</a>
       {% endif %}</span></li>
   {% endfor %}
   </ul>
@@ -41,7 +41,7 @@
   <tr>
     <td class="nowrap">{{ e.datum|date:"D d.m." }}</td>
     <td>{% include "reisen/_ort.html" with ort=e.von_ort %} → {% include "reisen/_ort.html" with ort=e.nach_ort %}
-      {% if not pdf and e.karten_link %}<a class="klein" href="{{ e.karten_link }}" target="_blank" rel="noopener">Karte</a>{% endif %}
+      {% if not pdf and e.karten_link %}<a class="klein" href="{{ e.karten_link }}" target="_blank" rel="noopener" title="Route in Google Maps">Google</a>{% endif %}
       {% if not pdf and e.adac_link %}<a class="klein" href="{{ e.adac_link }}" target="_blank" rel="noopener" title="Route mit Maut in ADAC Maps">ADAC</a>{% endif %}
       {% if e.fahrzeugprofil %}<br><span class="leise klein">mit {{ e.fahrzeugprofil }}</span>{% endif %}</td>
     <td class="zahl">{{ e.startzeit|time:"H:i"|default:"–" }}</td>
