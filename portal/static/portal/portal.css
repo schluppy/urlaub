@@ -174,3 +174,37 @@ table.kosten { min-width: 0; max-width: 30rem; background: var(--weiss); border:
 body.breit main, body.breit .kopf-innen, body.breit .fuss-seite { max-width: 76rem; }
 .uebersicht .zeitraum .zusatz { display: inline-block; line-height: 1.3; }   /* Umbruch gezielt per <br> */
 @media (max-width: 40rem) { .uebersicht .ziel { white-space: normal; } }   /* Handy: Platzname darf umbrechen, Etikett bleibt ganz */
+
+/* Anmelden-Link ohne Anmeldung rechts in der Leiste (wie „Abmelden“) */
+nav.haupt a.anmelden-link { margin-left: auto; }
+
+/* Anleitung */
+.anleitung-seite .einleitung { font-size: 1.1rem; max-width: 46rem; }
+.anleitung-seite section { max-width: 46rem; scroll-margin-top: 1rem; }
+.anleitung-seite section > h3 { font-size: 1.3rem; margin: 2rem 0 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--linie); }
+.anleitung-seite h2.teil {
+  font-family: var(--schmal); font-size: 2rem; color: var(--blau); margin-top: 2.5rem;
+  border-bottom: 3px solid var(--orange); padding-bottom: 0.2rem;
+}
+.inhaltsverzeichnis { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.5rem 1.5rem; }
+.inhaltsverzeichnis h2 { font-size: 1.1rem; margin: 0 0 0.3rem; color: var(--blau); }
+.inhaltsverzeichnis ol { margin: 0; padding-left: 1.3rem; }
+.inhaltsverzeichnis li { margin: 0.15rem 0; }
+ol.schritte { padding-left: 0; list-style: none; counter-reset: schritt; }
+ol.schritte > li { counter-increment: schritt; position: relative; padding-left: 2.3rem; margin: 0.55rem 0; }
+ol.schritte > li::before {
+  content: counter(schritt); position: absolute; left: 0; top: 0.05rem; width: 1.6rem; height: 1.6rem;
+  border-radius: 50%; background: var(--blau); color: var(--weiss); font-weight: 700; font-size: 0.9rem;
+  display: flex; align-items: center; justify-content: center;
+}
+.tipp { background: var(--blau-hell); border-left: 4px solid var(--blau); border-radius: var(--r); padding: 0.7rem 1rem; margin: 1rem 0; }
+.tipp.wichtig { background: var(--orange-hell); border-left-color: var(--orange-tief); }
+.tipp > :first-child { margin-top: 0; }
+.tipp > :last-child { margin-bottom: 0; }
+.tipp ul { padding-left: 1.2rem; }
+dl.begriffe dt, dl.fragen dt { font-weight: 700; margin-top: 0.8rem; }
+dl.begriffe dd, dl.fragen dd { margin: 0.15rem 0 0 0; }
+.anleitung-seite code { background: var(--weiss); border: 1px solid var(--linie); border-radius: 4px; padding: 0 0.3rem; }
+.anleitung-seite .nach-oben { margin: 1.5rem 0 0; font-size: 0.85rem; }
+.anleitung-seite .nach-oben a { color: var(--grau); text-decoration: none; }
+.anleitung-seite .nach-oben a:hover { color: var(--blau); text-decoration: underline; }

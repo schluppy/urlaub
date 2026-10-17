@@ -1,0 +1,419 @@
+{% extends "portal/base.html" %}
+{% block titel %}Anleitung{% endblock %}
+{% block body_klasse %}anleitung-seite{% endblock %}
+{% block inhalt %}
+<h1>Anleitung</h1>
+<p class="einleitung">Der Urlaubsplaner hilft euch, Urlaube mit Wohnwagen oder Wohnmobil zu planen: Wohin geht es,
+wann fahrt ihr los, wo übernachtet ihr, was kostet es – und wer bekommt Bescheid? Diese Anleitung erklärt alles
+von Anfang an. Du musst nichts über Technik wissen.</p>
+
+<nav class="flaeche inhaltsverzeichnis" aria-label="Inhalt">
+  <div>
+    <h2>Grundlagen</h2>
+    <ol>
+      <li><a href="#ueberblick">Was der Urlaubsplaner kann</a></li>
+      <li><a href="#anmelden">Anmelden ohne Passwort</a></li>
+      <li><a href="#neue-personen">Neue Personen dazuholen</a></li>
+      <li><a href="#aufbau">So ist der Urlaubsplaner aufgebaut</a></li>
+      <li><a href="#begriffe">Die wichtigsten Begriffe</a></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Schritt für Schritt</h2>
+    <ol>
+      <li><a href="#fahrzeug">Fahrzeugprofil anlegen</a></li>
+      <li><a href="#orte">Zuhause und Campingplätze anlegen</a></li>
+      <li><a href="#reise">Eine Reise anlegen</a></li>
+      <li><a href="#etappen">Etappen eintragen</a></li>
+      <li><a href="#route">Route berechnen lassen</a></li>
+      <li><a href="#buchungen">Übernachtungen eintragen</a></li>
+      <li><a href="#kosten">Weitere Kosten und Links</a></li>
+      <li><a href="#erinnerungen">Erinnerungen</a></li>
+      <li><a href="#loeschen">Etwas löschen</a></li>
+    </ol>
+  </div>
+  <div>
+    <h2>Für Fortgeschrittene</h2>
+    <ol>
+      <li><a href="#teilen">Eine Reise teilen</a></li>
+      <li><a href="#kalender">Der Jahreskalender</a></li>
+      <li><a href="#google">Urlaube im Google Kalender</a></li>
+      <li><a href="#export">PDF und Excel</a></li>
+      <li><a href="#handy">Auf dem Handy</a></li>
+      <li><a href="#fragen">Häufige Fragen</a></li>
+      <li><a href="#super-admin">Für den Super-Admin</a></li>
+    </ol>
+  </div>
+</nav>
+
+{# ======================================================================= #}
+<h2 class="teil">Grundlagen</h2>
+
+<section id="ueberblick">
+<h3>Was der Urlaubsplaner kann</h3>
+<ul>
+  <li><b>Reisen planen</b> – mit Etappen (Fahrten von Ort zu Ort), Übernachtungen und Kosten.</li>
+  <li><b>Routen fürs Gespann</b> – die Fahrstrecke wird passend zu Länge, Breite, Höhe und Gewicht eures Fahrzeugs berechnet.</li>
+  <li><b>Rechnen lassen</b> – Nächte, Ankunftszeiten, Kraftstoffkosten, Summen und Urlaubstage ergeben sich von selbst.</li>
+  <li><b>Jahreskalender</b> – alle Urlaube mit Feiertagen und Schulferien auf einen Blick, auch als PDF zum Ausdrucken.</li>
+  <li><b>Teilen</b> – Oma, Opa oder Freunde bekommen einen Link und sehen, wann ihr wo seid.</li>
+  <li><b>Erinnern</b> – per E-Mail an fällige Zahlungen und vor der Abfahrt.</li>
+</ul>
+<p>Jede Familie sieht nur ihre eigenen Reisen, Orte und Fahrzeuge.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="anmelden">
+<h3>Anmelden ohne Passwort</h3>
+<p>Es gibt kein Passwort, das man sich merken muss. Stattdessen bekommst du einen Anmeldelink per E-Mail.</p>
+<ol class="schritte">
+  <li>Öffne <a href="{% url 'portal:anmelden' %}">Anmelden</a> und gib deine E-Mail-Adresse ein.</li>
+  <li>Klicke auf <b>„Anmeldelink senden“</b>.</li>
+  <li>Öffne die E-Mail „Dein Anmeldelink – Urlaubsplaner“ und klicke auf den Link darin.</li>
+  <li>Es öffnet sich eine Seite mit deinem Namen. Klicke auf <b>„Jetzt anmelden“</b> – fertig.</li>
+</ol>
+<div class="tipp">
+  <p><b>Gut zu wissen</b></p>
+  <ul>
+    <li>Der Link gilt <b>{{ link_minuten }} Minuten</b> und funktioniert <b>nur einmal</b>. Ist er abgelaufen, forderst du einfach einen neuen an.</li>
+    <li>Du bleibst danach auf diesem Gerät etwa <b>{{ angemeldet_tage }} Tage</b> angemeldet – auch wenn du den Browser schließt.</li>
+    <li>Auf jedem Gerät (Handy, Laptop) meldest du dich einmal an.</li>
+    <li>Keine E-Mail bekommen? Schau im Spam-Ordner nach. Kommt gar nichts, ist deine Adresse vermutlich noch nicht eingetragen – siehe nächster Abschnitt.</li>
+    <li>Oben rechts kannst du dich jederzeit <b>abmelden</b>.</li>
+  </ul>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="neue-personen">
+<h3>Neue Personen dazuholen</h3>
+<p>Wer mitplanen möchte, braucht einen Zugang. Den legt der <b>Super-Admin</b> an – das ist die Person, die
+den Urlaubsplaner betreut. Melde dich also bei ihr mit Name und E-Mail-Adresse.</p>
+<p>Der Super-Admin trägt dich bei deiner Familie ein. Danach meldest du dich wie oben beschrieben selbst an.
+Eine Einladungsmail gibt es nicht – sag der neuen Person einfach Bescheid, dass sie loslegen kann.</p>
+<p class="leise">Wie das Eintragen geht, steht unten unter <a href="#super-admin">Für den Super-Admin</a>.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="aufbau">
+<h3>So ist der Urlaubsplaner aufgebaut</h3>
+<p>Oben in der blauen Leiste findest du:</p>
+<dl class="begriffe">
+  <dt>Reisen</dt>
+  <dd>Die Startseite: alle Reisen eines Jahres mit Zeitraum, Zielen, Kosten und Stand der Buchungen.
+      Darüber stehen <b>„Demnächst“</b> anstehende Zahlungen und Erinnerungen und darunter <b>Hinweise</b> auf Lücken.
+      Ein Klick auf eine Reise öffnet ihre Seite mit Karte, Etappen, Übernachtungen und Kosten.</dd>
+  <dt>Kalender</dt>
+  <dd>Der Jahreskalender mit allen Urlauben, Feiertagen und Schulferien.</dd>
+  <dt>Bearbeiten</dt>
+  <dd>Hier gibst du alles ein: Reisen, Orte, Fahrzeugprofile und Erinnerungen. Diese Seiten sehen etwas
+      nüchterner aus – das ist die Eingabe, angezeigt wird alles schön auf den Seiten <b>Reisen</b> und <b>Kalender</b>.</dd>
+  <dt>Anleitung</dt>
+  <dd>Diese Seite.</dd>
+</dl>
+<div class="tipp">
+  <p><b>Ansehen und bearbeiten</b> – Auf jeder Reiseseite führt der Knopf <b>„Bearbeiten“</b> direkt zur Eingabe.
+  Nach dem Speichern kommst du über <b>„Reisen“</b> oben wieder zur Ansicht.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="begriffe">
+<h3>Die wichtigsten Begriffe</h3>
+<dl class="begriffe">
+  <dt>Reise</dt>
+  <dd>Ein Urlaub, z. B. „Sommer am Gardasee“. Der Titel erscheint so auch im Kalender.</dd>
+  <dt>Urlaub und Reisezeit</dt>
+  <dd>Eine Reise hat zwei Zeiträume. Der <b>Urlaub</b> ist die Zeit, die ihr frei habt – inklusive Packen und
+      Auspacken. Er bestimmt den Kalender und die Urlaubstage. Die <b>Reisezeit</b> ist die Zeit, in der ihr mit dem
+      Fahrzeug unterwegs seid. Meist ist beides gleich; dann lässt du den Urlaub einfach leer.
+      Fahrt ihr an einem Arbeitstag vor dem Urlaub los, gilt das als <b>„Abfahrt nach Feierabend“</b> und kostet keinen Urlaubstag.</dd>
+  <dt>Etappe</dt>
+  <dd>Eine Fahrt von einem Ort zum nächsten an einem Tag, z. B. „Zuhause → Campingplatz am See“.</dd>
+  <dt>Übernachtung (Buchung)</dt>
+  <dd>Ein Aufenthalt auf einem Platz mit Anreise, Abreise, Preis und Stand der Buchung
+      (<i>geplant, angefragt, gebucht, angezahlt, bezahlt</i> oder <i>storniert</i>).</dd>
+  <dt>Ort</dt>
+  <dd>Jeder Ort, an dem eine Etappe beginnt oder endet: euer <b>Zuhause</b>, ein <b>Campingplatz</b>, eine
+      <b>Zwischenübernachtung</b> (eine Nacht auf dem Weg), ein <b>Fährterminal</b> oder <b>Sonstiges</b>.
+      Orte legt ihr einmal an und nutzt sie in allen Reisen.</dd>
+  <dt>Fahrzeugprofil</dt>
+  <dd>Die Maße und der Verbrauch eures Gespanns oder Wohnmobils – für Routen und Kraftstoffkosten.</dd>
+  <dt>Hinweise</dt>
+  <dd>Der Urlaubsplaner meldet von selbst, wo noch etwas fehlt: Etappen ohne Route, Nächte ohne Übernachtung, fällige Restzahlungen.</dd>
+</dl>
+</section>
+
+{# ======================================================================= #}
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<h2 class="teil">Schritt für Schritt</h2>
+<p>Die Reihenfolge für eine neue Reise: einmalig <a href="#fahrzeug">Fahrzeugprofil</a> und <a href="#orte">Zuhause</a>
+anlegen, dann <a href="#reise">Reise</a> → <a href="#etappen">Etappen</a> → <a href="#route">Route</a> →
+<a href="#buchungen">Übernachtungen</a>.</p>
+
+<section id="fahrzeug">
+<h3>Fahrzeugprofil anlegen</h3>
+<p>Einmalig für jedes Fahrzeug bzw. Gespann.</p>
+<ol class="schritte">
+  <li>Oben auf <b>Bearbeiten</b>, dann bei <b>Fahrzeugprofile</b> auf <b>„Hinzufügen“</b>.</li>
+  <li>Einen <b>Namen</b> vergeben, z. B. „Bus mit Wohnwagen“, und die <b>Art</b> wählen: Gespann mit Wohnwagen oder Wohnmobil.</li>
+  <li>Die <b>Maße</b> eintragen: Gesamtlänge (Zugfahrzeug und Wohnwagen zusammen), Breite, Höhe, Gesamtgewicht,
+      höchste Achslast, Achszahl und Höchstgeschwindigkeit. Kommazahlen mit Komma, z. B. 2,55.</li>
+  <li>Den <b>Ø Verbrauch</b> in Litern pro 100 km eintragen – daraus werden die Kraftstoffkosten berechnet.</li>
+  <li><b>Sichern</b>.</li>
+</ol>
+<div class="tipp">
+  <p><b>Für Genaue: die Verbrauchskurve</b> – Optional kannst du angeben, wie viel ihr bei welchem Tempo verbraucht,
+  z. B. <code>80,10:90,11:100,12</code> (bei 80 km/h 10 Liter, bei 90 km/h 11 Liter …). Dann schätzt TomTom den Verbrauch
+  je Etappe genauer. Ohne Kurve gilt der Ø Verbrauch.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="orte">
+<h3>Zuhause und Campingplätze anlegen</h3>
+<ol class="schritte">
+  <li>Oben auf <b>Bearbeiten</b>, dann bei <b>Orte</b> auf <b>„Hinzufügen“</b>.</li>
+  <li><b>Name</b> und <b>Typ</b> wählen. Euer <b>Zuhause</b> legt ihr einmal mit dem Typ „Zuhause“ an.</li>
+  <li>Die <b>Adresse</b> so eintragen, wie man sie ins Navi tippen würde. Beim Sichern sucht der Urlaubsplaner die
+      Koordinaten selbst heraus – die braucht er für Karte und Route.</li>
+  <li>Optional: <b>Website</b> (wird auf der Reiseseite zum Link), <b>Bewertung</b> mit 1 bis 5 Sternen, Preise und Notizen.</li>
+  <li><b>Sichern</b>.</li>
+</ol>
+<div class="tipp">
+  <p><b>Schneller:</b> Campingplätze kannst du auch direkt beim Eintragen der Etappen anlegen – mit dem <b>＋</b> neben
+  dem Feld „Von“ oder „Nach“. Dann öffnet sich ein kleines Fenster; mit <b>„Sichern“</b> ist der Platz angelegt
+  und gleich ausgewählt.</p>
+  <p>In der Liste der Orte hilft die <b>Suche</b> oben; mit <b>„✕ Zurücksetzen“</b> siehst du wieder alle.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="reise">
+<h3>Eine Reise anlegen</h3>
+<ol class="schritte">
+  <li>Auf der Seite <b>Reisen</b> auf <b>„Neue Reise“</b> klicken.</li>
+  <li><b>Titel</b> eintragen, z. B. „Pfingsten an der Ostsee“.</li>
+  <li><b>Reisezeit von / bis</b>: Abfahrts- und Rückkehrtag.</li>
+  <li><b>Urlaub von / bis</b>: nur ausfüllen, wenn ihr länger frei habt als ihr unterwegs seid (z. B. ein Tag zum Packen vorher).</li>
+  <li>Unter <b>Fahrt</b> das <b>Fahrzeugprofil</b> wählen und den <b>Kraftstoffpreis</b> pro Liter eintragen.
+      „Ø Verbrauch“ bleibt meist leer – dann gilt der Wert aus dem Fahrzeugprofil.</li>
+  <li><b>„im Kalender“</b> bleibt angehakt. Nur bei Ideen und Alternativen, die (noch) nicht im Kalender stehen sollen, den Haken entfernen.</li>
+  <li><b>„Sichern und weiter bearbeiten“</b> klicken – jetzt kommen die Etappen dazu.</li>
+</ol>
+<div class="tipp">
+  <p><b>Vignetten meiden:</b> Wer z. B. in der Schweiz oder Österreich keine Vignette kaufen möchte, trägt
+  bei „Vignettenpflichtige Straßen meiden in“ <code>CHE,AUT</code> ein. Die Route umfährt diese Straßen dann.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="etappen">
+<h3>Etappen eintragen</h3>
+<p>Jede Fahrt ist eine Etappe – auch die Rückfahrt nach Hause.</p>
+<ol class="schritte">
+  <li>In der Reise unten bei <b>Etappen</b> auf <b>„Etappe hinzufügen“</b> klicken.</li>
+  <li><b>Datum</b>, <b>Von</b> und <b>Nach</b> wählen. Bei weiteren Etappen schlägt der Urlaubsplaner den nächsten Tag und
+      als Start das Ziel der vorigen Etappe vor.</li>
+  <li><b>Start</b> (Abfahrtszeit) und <b>Pause</b> eintragen, z. B. 1:15 für eine Stunde und 15 Minuten.</li>
+  <li>Entfernung und Fahrzeit kannst du leer lassen – die berechnet die <a href="#route">Route</a>.
+      Die <b>Ankunft</b> ergibt sich aus Start, Fahrzeit und Pause.</li>
+  <li>Mehrere Etappen nacheinander anlegen, dann <b>„Sichern und weiter bearbeiten“</b>. Die Etappen stehen danach nach Datum sortiert.</li>
+</ol>
+<div class="tipp">
+  <p><b>Rundreise:</b> Du kannst zuerst Hin- und Rückfahrt eintragen und später Etappen dazwischen ergänzen – jedes
+  Datum innerhalb der Reisezeit ist wählbar.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="route">
+<h3>Route berechnen lassen</h3>
+<p>Auf der Reiseseite (oder in der Eingabe oben rechts) auf <b>„Route aktualisieren“</b> klicken. Der Urlaubsplaner
+fragt bei TomTom für jede Etappe die beste Strecke für euer Fahrzeug an und trägt ein:</p>
+<ul>
+  <li>Entfernung und Fahrzeit (und damit die Ankunft),</li>
+  <li>die Länder, durch die ihr fahrt, nötige <b>Vignetten</b> und <b>Fähren</b>,</li>
+  <li>den Streckenverlauf auf der <b>Karte</b> – oben rechts in der Karte umschaltbar zwischen OpenStreetMap und TomTom.</li>
+</ul>
+<p>Ändert ihr später etwas an den Etappen, einfach noch einmal auf „Route aktualisieren“ klicken. Gestrichelte
+Linien auf der Karte bedeuten: Für diese Etappe gibt es noch keine Route.</p>
+<p>Hinter jeder Etappe stehen auf der Reiseseite zwei Links, die sich in einem neuen Fenster öffnen:</p>
+<ul>
+  <li><b>Karte</b> – die Strecke in Google Maps, z. B. zum Weiterschicken oder fürs Handy-Navi.</li>
+  <li><b>ADAC</b> – die Strecke in ADAC Maps, passend zur Art eures Fahrzeugs (Gespann oder Wohnmobil).</li>
+</ul>
+<div class="tipp">
+  <p><b>Maut berechnen mit ADAC Maps:</b> Der Urlaubsplaner kennt Vignetten und Fähren, aber nicht die Höhe der Maut.
+  Die zeigt <a href="https://maps.adac.de/" target="_blank" rel="noopener">ADAC Maps</a>: Dort lässt sich die Route
+  für Wohnwagen-Gespann oder Wohnmobil berechnen – mit den Mautkosten unterwegs. Am schnellsten über den Link
+  <b>„ADAC“</b> bei der Etappe. Die Maut tragt ihr dann unter <a href="#kosten">Weitere Kosten</a> ein.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="buchungen">
+<h3>Übernachtungen eintragen</h3>
+<div class="tipp wichtig">
+  <p><b>Erst die Etappen sichern!</b> Welche Plätze zur Auswahl stehen, ergibt sich aus den gespeicherten Etappen.
+  Solange neue oder geänderte Etappen nicht gesichert sind, ist „Buchung hinzufügen“ ausgeblendet.</p>
+</div>
+<ol class="schritte">
+  <li>In der Reise bei <b>Buchungen</b> auf <b>„Buchung hinzufügen“</b> klicken. Platz, Anreise und Abreise sind schon
+      aus den Etappen vorgeschlagen.</li>
+  <li>Entweder den <b>Preis/Nacht</b> oder den <b>Gesamtpreis</b> eintragen – das jeweils andere Feld zeigt den umgerechneten Wert grau an.</li>
+  <li>Falls schon bezahlt: <b>Anzahlung</b> und das Datum <b>„Rest fällig am“</b>. Daran erinnert der Urlaubsplaner per Mail.</li>
+  <li>Den <b>Status</b> setzen, z. B. „angefragt“ oder „gebucht“. Er erscheint farbig in der Jahresübersicht.</li>
+  <li>Optional <b>Buchungsnr.</b> und <b>Stellplatz</b>.</li>
+  <li><b>Sichern</b>.</li>
+</ol>
+<div class="tipp">
+  <p><b>Bezahlt ihr in einer anderen Währung</b> (z. B. Pfund in Schottland), den Haken <b>„Fremdwährung“</b> setzen.
+  Dann erscheinen <b>Währung</b> (z. B. GBP) und <b>Kurs</b>: Wie viel bekommt man für 1 €? Die Summen rechnet der
+  Urlaubsplaner in Euro um.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="kosten">
+<h3>Weitere Kosten und Links</h3>
+<p>Unter <b>Kostenpositionen</b> tragt ihr alles ein, was nicht Übernachtung oder Kraftstoff ist: <b>Fähre</b>,
+<b>Vignette</b>, <b>Maut</b> oder <b>Sonstiges</b> – jeweils mit Betrag in Euro und einer Notiz.
+Die Kraftstoffkosten rechnet der Urlaubsplaner selbst aus Strecke, Verbrauch und Kraftstoffpreis.</p>
+<p>Unter <b>Links</b> sammelt ihr nützliche Adressen zur Reise, z. B. die Fährbuchung oder einen Reiseführer. Sie stehen auf der Reiseseite.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="erinnerungen">
+<h3>Erinnerungen</h3>
+<p>Der Urlaubsplaner schickt morgens E-Mails an alle in eurer Familie:</p>
+<ul>
+  <li><b>Restzahlungen</b> – eine Woche vor dem Datum „Rest fällig am“ und am Tag selbst.</li>
+  <li><b>Reisecheck</b> – 14 Tage vor der Abfahrt: Ist alles gebucht, jede Route berechnet, alles bezahlt?</li>
+  <li><b>Eigene Erinnerungen</b> – z. B. „Fähre ab heute buchbar“. Anlegen auf der Startseite unter „Demnächst“ mit
+      <b>„Erinnerung anlegen“</b> oder in der Reise unten bei <b>Erinnerungen</b>: Datum und Text eintragen, sichern.</li>
+</ul>
+<p>Was in den nächsten Wochen ansteht, steht außerdem auf der Startseite unter <b>„Demnächst“</b>.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="loeschen">
+<h3>Etwas löschen</h3>
+<ul>
+  <li><b>Eine Etappe, Buchung, Kostenposition …</b>: in der Zeile bzw. im Block das Kästchen <b>„Löschen?“</b> anhaken
+      (der Eintrag wird durchgestrichen) und dann <b>„Sichern“</b> klicken.</li>
+  <li>Der rote Knopf <b>„Ganze Reise löschen“</b> löscht die komplette Reise mit allem, was dazugehört. Davor kommt noch eine Sicherheitsabfrage.</li>
+  <li><b>Orte und Fahrzeugprofile</b> löscht man in ihrer eigenen Liste unter <b>Bearbeiten</b> – aber nur, wenn keine Reise sie mehr verwendet.</li>
+</ul>
+</section>
+
+{# ======================================================================= #}
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<h2 class="teil">Für Fortgeschrittene</h2>
+
+<section id="teilen">
+<h3>Eine Reise teilen</h3>
+<p>So sehen Großeltern, Nachbarn oder Freunde, wann ihr wo seid – ohne Anmeldung und ohne etwas ändern zu können.</p>
+<ol class="schritte">
+  <li>Auf der Reiseseite auf <b>„Teilen“</b> klicken.</li>
+  <li><b>Gültig bis</b> wählen – nach diesem Tag funktioniert der Link nicht mehr. Die Knöpfe „1 Tag“, „1 Woche“ und „1 Monat“ helfen.</li>
+  <li>Bei <b>„Für“</b> optional eintragen, wer den Link bekommt, z. B. „Oma“. Das seht nur ihr.</li>
+  <li>Nur wenn gewünscht: <b>„Kosten und Buchungsdetails zeigen“</b> anhaken.</li>
+  <li><b>„Link erstellen“</b>, dann mit <b>WhatsApp</b>, <b>E-Mail</b> oder <b>„Link kopieren“</b> verschicken.
+      Auf dem Handy gibt es zusätzlich <b>„Teilen …“</b> für alle anderen Apps.</li>
+</ol>
+<div class="tipp">
+  <p><b>Eure Privatsphäre:</b> Euer <b>Zuhause wird nie gezeigt</b> – die Route auf der Karte beginnt erst einige Kilometer
+  entfernt. Ohne den Haken sehen Empfänger nur Zeitraum, Etappen, Plätze und Karte, aber keine Preise, Buchungsnummern und Notizen.</p>
+  <p>Unter <b>„Aktive Links“</b> siehst du, wie oft ein Link aufgerufen wurde, und kannst ihn mit <b>„Beenden“</b> sofort abschalten.</p>
+</div>
+<p><b>Den ganzen Kalender teilen</b> geht genauso: auf der Seite <b>Kalender</b> auf <b>„Teilen“</b>. Empfänger sehen dann
+den Jahreskalender mit euren Urlauben und können ihn als PDF laden.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="kalender">
+<h3>Der Jahreskalender</h3>
+<p>Unter <b>Kalender</b> steht das ganze Jahr in Monatsspalten: eure <b>Urlaube</b> in Orange, <b>Feiertage</b> in Rot,
+<b>Schulferien</b> in Blau – jeweils für das Bundesland eurer Familie. Darunter steht, wie viele Urlaubstage jede Reise kostet
+(Montag bis Freitag ohne Feiertage).</p>
+<p>Mit <b>„PDF“</b> bekommst du den Kalender auf einer Seite A4 quer, zum Ausdrucken oder Aufhängen. Reisen ohne
+den Haken „im Kalender“ (Alternativen) erscheinen nicht.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="google">
+<h3>Urlaube im Google Kalender</h3>
+<p>Eure Urlaube können automatisch im Google Kalender (oder Apple, Outlook) auf dem Handy erscheinen: je Reise ein
+Termin über den ganzen Urlaub, mit dem Hauptziel als Ort. Das richtet jede Person für sich einmal ein.</p>
+<ol class="schritte">
+  <li>Auf der Seite <b>Kalender</b> auf <b>„Google Kalender“</b>, dann <b>„Abo-Link erzeugen“</b>.</li>
+  <li><b>„Link kopieren“</b> klicken.</li>
+  <li><b>„Google Kalender öffnen“</b> – das geht nur <b>am Computer im Browser</b>, nicht in der App auf dem Handy.
+      Es öffnet sich direkt „Per URL hinzufügen“.</li>
+  <li>Den Link einfügen und <b>„Kalender hinzufügen“</b> klicken.</li>
+  <li>Der Kalender „Urlaube …“ steht links unter „Weitere Kalender“ und erscheint nach kurzer Zeit auch auf dem Handy.</li>
+</ol>
+<div class="tipp">
+  <p><b>Geduld:</b> Google holt Änderungen nur alle paar Stunden ab – manchmal dauert es bis zu einem Tag. Nachhelfen
+  kann man nicht. Wer es eilig hat, erzeugt einen <b>neuen Link</b>, entfernt den alten Kalender in Google und fügt
+  den neuen hinzu – den lädt Google sofort.</p>
+  <p><b>Geheim halten:</b> Wer den Abo-Link kennt, sieht eure Urlaube. Mit <b>„Link beenden“</b> schaltest du ihn ab.</p>
+  <p><b>iPhone, Mac, Outlook:</b> statt Google den Knopf <b>„Apple / Outlook“</b> nutzen.</p>
+</div>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="export">
+<h3>PDF und Excel</h3>
+<p>Auf jeder Reiseseite gibt es <b>„PDF“</b> (zum Ausdrucken oder Mitnehmen) und <b>„Excel“</b> (zum Weiterrechnen).
+Beide tragen Datum und Uhrzeit, damit klar ist, wie aktuell der Ausdruck ist. In der Excel-Datei stehen echte
+Formeln – ändert ihr dort z. B. den Kraftstoffpreis, rechnet sie neu.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="handy">
+<h3>Auf dem Handy</h3>
+<p>Der Urlaubsplaner funktioniert im Browser des Handys – unterwegs zum Nachschauen, wann ihr losmüsst und wie der
+nächste Platz heißt. Über das Menü des Browsers kannst du ihn <b>„Zum Startbildschirm hinzufügen“</b>; dann gibt es ein
+eigenes Symbol wie bei einer App. Eingeben geht auch auf dem Handy, am größeren Bildschirm ist es aber bequemer.</p>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="fragen">
+<h3>Häufige Fragen</h3>
+<dl class="fragen">
+  <dt>Ich bekomme keine Anmelde-Mail.</dt>
+  <dd>Im Spam-Ordner nachsehen und die Schreibweise der Adresse prüfen. Kommt immer noch nichts, ist die Adresse
+      wahrscheinlich nicht eingetragen – dann beim Super-Admin melden.</dd>
+  <dt>„Dieser Link funktioniert nicht mehr.“</dt>
+  <dd>Der Anmeldelink war älter als {{ link_minuten }} Minuten oder wurde schon benutzt. Einfach einen neuen anfordern.</dd>
+  <dt>Ich kann keine Übernachtung hinzufügen.</dt>
+  <dd>Erst die Etappen sichern. Die Plätze für Übernachtungen kommen aus den gespeicherten Etappen.</dd>
+  <dt>Die Route lässt sich nicht berechnen.</dt>
+  <dd>Meist fehlt bei einem Ort die Adresse oder sie wurde nicht gefunden. Den Ort unter <b>Bearbeiten → Orte</b> öffnen,
+      die Adresse ergänzen oder genauer schreiben und sichern. Danach noch einmal „Route aktualisieren“.</dd>
+  <dt>Eine Reise taucht nicht im Kalender auf.</dt>
+  <dd>In der Reise prüfen, ob „im Kalender“ angehakt ist.</dd>
+  <dt>Google Kalender zeigt eine Änderung noch nicht.</dt>
+  <dd>Google holt die Daten nur alle paar Stunden ab. Siehe <a href="#google">Urlaube im Google Kalender</a>.</dd>
+</dl>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+<section id="super-admin">
+<h3>Für den Super-Admin</h3>
+<p>Der Super-Admin sieht unter <b>Bearbeiten</b> zusätzlich den Bereich <b>„Personen und Anmeldung“</b>. Die Reisen anderer
+Familien sieht auch er nicht.</p>
+<ul>
+  <li><b>Neue Person</b>: <b>Personen → Hinzufügen</b>, Name, E-Mail-Adresse und Familie eintragen, „aktiv“ angehakt lassen, sichern.
+      Die Person meldet sich danach selbst an. Haken „aktiv“ entfernen sperrt den Zugang.</li>
+  <li><b>Neue Familie</b>: <b>Familien → Hinzufügen</b> mit Namen und Bundesland (für Feiertage und Schulferien). Die Schulferien für dieses und nächstes Jahr werden dabei automatisch geholt.</li>
+  <li><b>Schulferien</b> weiterer Jahre: unter <b>Kalender → Schulferien</b> per Knopf abrufen.</li>
+  <li><b>TomTom</b>: Unter <b>TomTom-Nutzung</b> steht, wie viel vom täglichen Kontingent verbraucht ist. Eine Familie kann
+      einen eigenen <b>TomTom-Schlüssel</b> bekommen.</li>
+</ul>
+</section>
+
+<p class="nach-oben"><a href="#">↑ nach oben</a></p>
+{% endblock %}

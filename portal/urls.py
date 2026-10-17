@@ -12,4 +12,5 @@ urlpatterns = [
     path("anmelden/link/<str:token>/", views.token, name="token"),
     path("abmelden/", views.abmelden, name="abmelden"),
     path("datenschutz/", views.datenschutz, name="datenschutz"),
+    path("anleitung/", views.anleitung, name="anleitung"),
 ]

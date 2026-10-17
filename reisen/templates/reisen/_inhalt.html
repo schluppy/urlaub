@@ -26,6 +26,7 @@
     <td class="nowrap">{{ e.datum|date:"D d.m." }}</td>
     <td>{% include "reisen/_ort.html" with ort=e.von_ort %} → {% include "reisen/_ort.html" with ort=e.nach_ort %}
       {% if not pdf and e.karten_link %}<a class="klein" href="{{ e.karten_link }}" target="_blank" rel="noopener">Karte</a>{% endif %}
+      {% if not pdf and e.adac_link %}<a class="klein" href="{{ e.adac_link }}" target="_blank" rel="noopener" title="Route mit Maut in ADAC Maps">ADAC</a>{% endif %}
       {% if e.fahrzeugprofil %}<br><span class="leise klein">mit {{ e.fahrzeugprofil }}</span>{% endif %}</td>
     <td class="zahl">{{ e.startzeit|time:"H:i"|default:"–" }}</td>
     <td class="zahl">{{ e.fahrzeit|dauer }}</td>

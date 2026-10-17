@@ -158,3 +158,47 @@ class EtappenLinksTest(TestCase):
         seite = self.client.get(reverse("reisen:reise", args=[r.pk]))
         self.assertContains(seite, '<a href="https://see.example/" target="_blank" rel="noopener">Seecamping</a>')
         self.assertNotContains(seite, "daheim.example")                     # Zuhause nie verlinkt
+
+
+class AnleitungTest(TestCase):
+    def test_ohne_anmeldung_lesbar_und_im_menue(self):
+        seite = self.client.get(reverse("portal:anleitung"))
+        self.assertContains(seite, "Anmelden ohne Passwort")
+        self.assertContains(seite, 'aria-current="page">Anleitung</a>')
+        self.assertContains(seite, "15 Minuten")
+        self.assertNotContains(seite, ">Bearbeiten</a>")                   # ohne Anmeldung keine weiteren Menüpunkte
+        self.assertContains(self.client.get(reverse("portal:anmelden")), reverse("portal:anleitung"))
+
+    def test_menue_angemeldet_und_anker(self):
+        import re
+
+        self.client.force_login(Person.objects.create_user("a@example.org", "A", familie=fam(), is_staff=True))
+        seite = self.client.get(reverse("portal:start")).content.decode()
+        self.assertIn(f'href="{reverse("portal:anleitung")}"', seite)
+        self.assertIn('aria-current="page">Reisen</a>', seite)
+        anleitung = self.client.get(reverse("portal:anleitung")).content.decode()
+        self.assertNotIn('aria-current="page">Reisen</a>', anleitung)
+        anker = set(re.findall(r'href="#([\w-]+)"', anleitung))
+        ziele = set(re.findall(r'id="([\w-]+)"', anleitung))
+        self.assertTrue(anker and anker <= ziele, anker - ziele)              # Inhaltsverzeichnis ohne tote Links
+
+
+class AdacLinkTest(TestCase):
+    def test_link_je_etappe_mit_fahrzeugart(self):
+        f = fam()
+        a = Ort.objects.create(familie=f, name="Start", breite=Decimal("54.1"), laenge=Decimal("10.25"))
+        b = Ort.objects.create(familie=f, name="Ziel", breite=Decimal("45.123456"), laenge=Decimal("7.5"))
+        ohne = Ort.objects.create(familie=f, name="Ohne Koordinaten")
+        mobil = Fahrzeugprofil.objects.create(familie=f, name="Mobil", art="motorhome")
+        r = Reise.objects.create(familie=f, titel="Kurz", von=date(2027, 8, 1), bis=date(2027, 8, 3))
+        e = Etappe.objects.create(reise=r, datum=date(2027, 8, 1), von_ort=a, nach_ort=b)
+        self.assertEqual(e.adac_link, "https://maps.adac.de/route?places=54.10000_10.25000_2_0,"
+                                      "45.12346_7.50000_6_0&vehicle-type=trailer")    # ohne Profil: Gespann
+        r.fahrzeugprofil = mobil
+        r.save()
+        e = Etappe.objects.get(pk=e.pk)
+        self.assertTrue(e.adac_link.endswith("&vehicle-type=motorhome"))
+        self.assertEqual(Etappe(reise=r, datum=r.von, von_ort=a, nach_ort=ohne).adac_link, "")
+        self.client.force_login(Person.objects.create_user("a@example.org", "A", familie=f, is_staff=True))
+        seite = self.client.get(reverse("reisen:reise", args=[r.pk]))
+        self.assertContains(seite, 'title="Route mit Maut in ADAC Maps">ADAC</a>')

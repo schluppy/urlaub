@@ -66,6 +66,14 @@ def datenschutz(request):
         "betreiber": settings.BETREIBER_NAME, "kontakt": settings.BETREIBER_EMAIL})
 
 
+def anleitung(request):
+    """Anleitung für Einsteiger – auch ohne Anmeldung lesbar (erklärt ja die Anmeldung)."""
+    from django.conf import settings
+    return render(request, "portal/anleitung.html", {
+        "link_minuten": settings.MAGIC_LINK_GUELTIGKEIT_MINUTEN,
+        "angemeldet_tage": settings.SESSION_COOKIE_AGE // 86400})
+
+
 @require_POST
 def abmelden(request):
     logout(request)

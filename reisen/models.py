@@ -338,6 +338,17 @@ class Etappe(models.Model):
                 f"&origin={self.von_ort.koordinaten}&destination={self.nach_ort.koordinaten}&travelmode=driving")
 
     @property
+    def adac_link(self):
+        """Route in ADAC Maps (mit Maut, Gespann bzw. Wohnmobil). ADAC hat keine API – nur dieser Link.
+        Punkte als lat_lon_Typ_0; 2 = Start, 6 = Ziel wie in den Links von maps.adac.de."""
+        if not (self.von_ort.hat_koordinaten and self.nach_ort.hat_koordinaten):
+            return ""
+        art = self.fahrzeug.art if self.fahrzeug else "trailer"
+        start = f"{self.von_ort.breite:.5f}_{self.von_ort.laenge:.5f}_2_0"
+        ziel = f"{self.nach_ort.breite:.5f}_{self.nach_ort.laenge:.5f}_6_0"
+        return f"https://maps.adac.de/route?places={start},{ziel}&vehicle-type={art}"
+
+    @property
     def ankunft(self):
         """Start + Fahrzeit + Pause; None, solange etwas fehlt."""
         if self.startzeit is None or self.fahrzeit is None:

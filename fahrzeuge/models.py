@@ -5,9 +5,17 @@ from django.core.validators import MinValueValidator
 from django.db import models
 
 
+class Fahrzeugart(models.TextChoices):
+    # Werte wie im Parameter vehicle-type von ADAC Maps
+    GESPANN = "trailer", "Gespann mit Wohnwagen"
+    WOHNMOBIL = "motorhome", "Wohnmobil"
+
+
 class Fahrzeugprofil(models.Model):
     familie = models.ForeignKey("konten.Familie", on_delete=models.CASCADE, related_name="fahrzeugprofile")
     name = models.CharField("Name", max_length=80)
+    art = models.CharField("Art", max_length=12, choices=Fahrzeugart.choices, default=Fahrzeugart.GESPANN,
+                           help_text="für den Link „ADAC“ bei den Etappen")
     laenge_m = models.DecimalField("Gesamtlänge (m)", max_digits=4, decimal_places=2,
                                    null=True, blank=True, help_text="inkl. Wohnwagen und Deichsel")
     breite_m = models.DecimalField("Breite (m)", max_digits=4, decimal_places=2, null=True, blank=True,

@@ -16,16 +16,21 @@
       <img src="{% static 'portal/wohnwagen.svg' %}" alt="" width="40" height="28">
       <span>Urlaubsplaner</span>
     </a>
-    {% if user.is_authenticated %}
     <nav class="haupt" aria-label="Hauptnavigation">
-      {% with app=request.resolver_match.app_name %}
-      <a href="{% url 'portal:start' %}" {% if app == 'portal' or app == 'reisen' %}aria-current="page"{% endif %}>Reisen</a>
+      {% with app=request.resolver_match.app_name seite=request.resolver_match.url_name %}
+      {% if user.is_authenticated %}
+      <a href="{% url 'portal:start' %}" {% if app == 'reisen' or app == 'portal' and seite == 'start' or app == 'portal' and seite == 'jahr' %}aria-current="page"{% endif %}>Reisen</a>
       <a href="{% url 'kalender:start' %}" {% if app == 'kalender' %}aria-current="page"{% endif %}>Kalender</a>
       <a href="{% url 'admin:index' %}">Bearbeiten</a>
+      {% endif %}
+      <a href="{% url 'portal:anleitung' %}" {% if seite == 'anleitung' %}aria-current="page"{% endif %}>Anleitung</a>
       {% endwith %}
+      {% if user.is_authenticated %}
       <form method="post" action="{% url 'portal:abmelden' %}">{% csrf_token %}<button type="submit">Abmelden</button></form>
+      {% else %}
+      <a class="anmelden-link" href="{% url 'portal:anmelden' %}">Anmelden</a>
+      {% endif %}
     </nav>
-    {% endif %}
   </div>
 </header>
 <main>
