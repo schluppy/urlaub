@@ -1,7 +1,10 @@
 from django import forms
 from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.db.models import Count, Sum
+from django.template.response import TemplateResponse
+from django.urls import path
 from django.utils import timezone
 from django.utils.html import format_html
 
@@ -20,7 +23,7 @@ class PersonForm(forms.ModelForm):
 @admin.register(Person)
 class PersonAdmin(NurSuperAdmin, admin.ModelAdmin):
     form = PersonForm
-    list_display = ["name", "email", "familie", "is_active", "is_superuser"]
+    list_display = ["name", "email", "familie", "is_active", "is_superuser", "zuletzt_aktiv"]
     list_filter = ["familie", "is_active", "is_superuser"]
     search_fields = ["name", "email"]
 
@@ -50,6 +53,18 @@ class FamilieAdmin(NurSuperAdmin, admin.ModelAdmin):
     search_fields = ["name"]
     fields = ["name", "bundesland", "api_schluessel"]
     inlines = [PersonInline]
+
+    def get_urls(self):
+        return [path("statistik/", self.admin_site.admin_view(self.statistik_view), name="konten_familie_statistik"),
+                *super().get_urls()]
+
+    def statistik_view(self, request):
+        from .statistik import kennzahlen
+        if not self._erlaubt(request):
+            raise PermissionDenied
+        return TemplateResponse(request, "admin/konten/familie/statistik.html", {
+            **self.admin_site.each_context(request), "title": "Statistik", "opts": self.model._meta,
+            "stand": timezone.now(), **kennzahlen()})
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("api_schluessel").annotate(

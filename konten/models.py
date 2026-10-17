@@ -165,6 +165,8 @@ class Person(AbstractBaseUser, PermissionsMixin):
     familie = models.ForeignKey(Familie, verbose_name="Familie", on_delete=models.PROTECT, null=True, blank=True,
                                 related_name="personen", help_text="leer nur beim Super-Admin ohne eigene Reisen")
     angelegt_am = models.DateTimeField(auto_now_add=True)
+    zuletzt_aktiv = models.DateTimeField("zuletzt aktiv", null=True, blank=True, editable=False,
+                                         help_text="letzter Seitenaufruf mit Anmeldung, auf wenige Minuten genau")
 
     objects = PersonManager()
 

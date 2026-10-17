@@ -1,0 +1,5 @@
+{% extends "admin/index.html" %}
+{% block content %}
+{% if user.is_superuser %}<p><a class="button" href="{% url 'admin:konten_familie_statistik' %}">Statistik je Familie</a></p>{% endif %}
+{{ block.super }}
+{% endblock %}

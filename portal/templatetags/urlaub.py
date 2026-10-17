@@ -48,3 +48,20 @@ def ohne_suche(cl):
     from django.contrib.admin.views.main import PAGE_VAR, SEARCH_VAR
 
     return cl.get_query_string(remove=[SEARCH_VAR, PAGE_VAR])
+
+
+
+@register.filter
+def vor(zeitpunkt):
+    """„vor 3 Tagen“ – nur die größte Einheit."""
+    if not zeitpunkt:
+        return "nie"
+    from django.utils import timezone
+    sekunden = (timezone.now() - zeitpunkt).total_seconds()
+    for laenge, eins, mehr in [(365 * 86400, "einem Jahr", "Jahren"), (30 * 86400, "einem Monat", "Monaten"),
+                               (86400, "einem Tag", "Tagen"), (3600, "einer Stunde", "Stunden"),
+                               (60, "einer Minute", "Minuten")]:
+        n = int(sekunden // laenge)
+        if n >= 1:
+            return f"vor {eins}" if n == 1 else f"vor {n} {mehr}"
+    return "gerade eben"

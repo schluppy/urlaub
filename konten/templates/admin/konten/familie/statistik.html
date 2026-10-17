@@ -1,0 +1,81 @@
+{% extends "admin/base_site.html" %}
+{% load urlaub %}
+{% block extrastyle %}{{ block.super }}
+<style>
+  .kacheln { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+  .kachel { border: 1px solid var(--hairline-color); border-radius: 4px; padding: 10px 14px; min-width: 150px; }
+  .kachel b { display: block; font-size: 1.5em; margin-bottom: 2px; }
+  .kachel span { color: var(--body-quiet-color); }
+  .statistik { width: 100%; overflow-x: auto; }
+  .statistik td.z, .statistik th.z { text-align: right; white-space: nowrap; }
+  .statistik td small { display: block; color: var(--body-quiet-color); }
+  .statistik tfoot td { font-weight: bold; border-top: 2px solid var(--hairline-color); }
+  .alt { color: var(--body-quiet-color); }
+</style>
+{% endblock %}
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Start</a> › <a href="{% url 'admin:app_list' 'konten' %}">{{ opts.app_config.verbose_name }}</a>
+  › <a href="{% url 'admin:konten_familie_changelist' %}">Familien</a> › Statistik
+</div>
+{% endblock %}
+{% block content %}
+<div id="content-main">
+  <div class="kacheln">
+    <div class="kachel"><b>{{ gesamt.zuletzt_genutzt|vor }}</b><span>zuletzt genutzt{% if gesamt.zuletzt_genutzt %} ({{ gesamt.zuletzt_genutzt|date:"d.m.Y H:i" }}){% endif %}</span></div>
+    <div class="kachel"><b>{{ gesamt.aktiv_heute }} / {{ gesamt.aktiv_7 }} / {{ summen.aktiv_30 }}</b><span>Personen aktiv heute / 7 / 30 Tage</span></div>
+    <div class="kachel"><b>{{ gesamt.familien }}</b><span>Familien, {{ summen.aktive_personen }} aktive Personen</span></div>
+    <div class="kachel"><b>{{ gesamt.logins_30 }} von {{ gesamt.links_30 }}</b><span>Login-Links genutzt (30 Tage)</span></div>
+    <div class="kachel"><b>{{ summen.freigaben_aufrufe|zahl }}</b><span>Aufrufe geteilter Links, zuletzt {{ gesamt.freigabe_zuletzt|vor }}</span></div>
+    <div class="kachel"><b>{{ summen.tomtom_30|zahl }}</b><span>TomTom-Abrufe (30 Tage)</span></div>
+  </div>
+
+  <div class="module statistik">
+    <table style="width:100%">
+      <caption>Je Familie</caption>
+      <thead><tr>
+        <th>Familie</th><th>zuletzt genutzt</th><th>zuletzt bearbeitet</th><th class="z">Personen</th>
+        <th class="z">Orte</th><th class="z">Reisen</th><th class="z">Etappen</th><th class="z">Buchungen</th>
+        <th class="z">Freigaben</th><th class="z">Kalender-Abos</th><th class="z">Erinnerungen</th>
+        <th class="z">TomTom (30 T.)</th>
+      </tr></thead>
+      <tbody>
+      {% for z in zeilen %}
+        <tr>
+          <td><a href="{% url 'admin:konten_familie_change' z.familie.pk %}">{{ z.familie.name }}</a><small>{{ z.familie.bundesland_name }}</small></td>
+          <td{% if not z.aktiv_30 %} class="alt"{% endif %}>{{ z.zuletzt_genutzt|vor }}{% if z.zuletzt_genutzt %}<small>{{ z.zuletzt_genutzt|date:"d.m.Y H:i" }}</small>{% endif %}</td>
+          <td>{{ z.zuletzt_bearbeitet|vor }}{% if z.aenderungen_30 %}<small>{{ z.aenderungen_30 }} Änderungen in 30 Tagen</small>{% endif %}</td>
+          <td class="z">{{ z.aktive_personen|default:0 }}{% if z.personen != z.aktive_personen %}<small>von {{ z.personen }}</small>{% endif %}{% if z.aktiv_30 %}<small>{{ z.aktiv_30 }} aktiv (30 T.)</small>{% endif %}</td>
+          <td class="z">{{ z.orte|default:0 }}</td>
+          <td class="z">{{ z.reisen|default:0 }}{% if z.reisen %}<small>{{ z.reisen_kommend }} kommend{% if z.reisen_laufend %}, {{ z.reisen_laufend }} unterwegs{% endif %}</small>{% endif %}</td>
+          <td class="z">{{ z.etappen|default:0 }}{% if z.km %}<small>{{ z.km|km }}</small>{% endif %}</td>
+          <td class="z">{{ z.buchungen|default:0 }}</td>
+          <td class="z">{{ z.freigaben_aktiv|default:0 }} aktiv{% if z.freigaben %}<small>{{ z.freigaben }} insgesamt, {{ z.freigaben_aufrufe|default:0 }} Aufrufe</small>{% endif %}{% if z.freigabe_zuletzt %}<small>zuletzt {{ z.freigabe_zuletzt|vor }}</small>{% endif %}</td>
+          <td class="z">{{ z.abos_aktiv|default:0 }}{% if z.abo_zuletzt %}<small>abgerufen {{ z.abo_zuletzt|vor }}</small>{% endif %}</td>
+          <td class="z">{{ z.erinnerungen_offen|default:0 }} offen{% if z.erinnerungen_gesendet %}<small>{{ z.erinnerungen_gesendet }} verschickt</small>{% endif %}</td>
+          <td class="z">{{ z.tomtom_30|default:0|zahl }}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="12">Noch keine Familien angelegt.</td></tr>
+      {% endfor %}
+      </tbody>
+      {% if zeilen|length > 1 %}
+      <tfoot><tr>
+        <td>Summe</td><td></td><td></td><td class="z">{{ summen.aktive_personen }}</td><td class="z">{{ summen.orte }}</td>
+        <td class="z">{{ summen.reisen }}<small>{{ summen.reisen_kommend }} kommend</small></td>
+        <td class="z">{{ summen.etappen }}<small>{{ summen.km|km }}</small></td><td class="z">{{ summen.buchungen }}</td>
+        <td class="z">{{ summen.freigaben_aktiv }} aktiv</td><td class="z">{{ summen.abos_aktiv }}</td>
+        <td class="z">{{ summen.erinnerungen_offen }} offen</td><td class="z">{{ summen.tomtom_30|zahl }}</td>
+      </tr></tfoot>
+      {% endif %}
+    </table>
+  </div>
+  <p class="help">
+    „Zuletzt genutzt“ ist der letzte Seitenaufruf einer angemeldeten Person (auf fünf Minuten genau) oder
+    ihr letzter Login oder ihre letzte Änderung. „Zuletzt bearbeitet“ kommt aus dem Änderungsprotokoll der Verwaltung.
+    Aktiv sind Freigaben, die weder beendet noch abgelaufen sind; offen sind Erinnerungen, die weder verschickt noch
+    erledigt sind. Inhalte der Familien (Titel, Orte, Texte) erscheinen hier bewusst nicht.
+    {% if gesamt.ohne_familie %}{{ gesamt.ohne_familie }} Person{{ gesamt.ohne_familie|pluralize:"en" }} ohne Familie.{% endif %}
+  </p>
+</div>
+{% endblock %}
