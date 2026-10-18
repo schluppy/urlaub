@@ -240,6 +240,22 @@ class FremdwaehrungTest(TestCase):
         self.assertIn('class="inline-related', seite[seite.index('id="buchungen-group"'):])   # Blöcke
         self.assertRegex(seite, r'<input type="checkbox" name="buchungen-0-fremdwaehrung"[^>]*checked')
 
+    def test_preis_als_rechnung(self):
+        for feld, text, soll in [("preis_pro_nacht", "=24+(2*8)+4+9", "53.00"), ("gesamtpreis", "=4*(30,5)", "122.00"),
+                                 ("preis_pro_nacht", "28,40", "28.40")]:
+            with self.subTest(text):
+                self.r.buchungen.all().delete()
+                preise = {"preis_pro_nacht": "", "gesamtpreis": "", feld: text}
+                self.assertEqual(self.speichern(waehrung="EUR", wechselkurs="1", **preise).status_code, 302)
+                self.assertEqual(str(getattr(self.r.buchungen.get(), feld)), soll)
+        seite = self.client.get(reverse("admin:reisen_reise_change", args=[self.r.pk])).content.decode()
+        self.assertRegex(seite, r'name="buchungen-0-preis_pro_nacht" value="28,40"')   # Dezimalkomma
+
+    def test_unverstaendliche_rechnung_ist_fehler(self):
+        for text in ["=24+", "=2**8", "=__import__('os')", "=1/0"]:
+            with self.subTest(text):
+                self.assertContains(self.speichern(preis_pro_nacht=text, waehrung="EUR", wechselkurs="1"), "Rechnung nicht verständlich")
+
     def test_haken_ohne_waehrung_ist_fehler(self):
         antwort = self.speichern(fremdwaehrung="on", waehrung="EUR", wechselkurs="1")
         self.assertEqual(antwort.status_code, 200)

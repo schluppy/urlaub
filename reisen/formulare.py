@@ -1,7 +1,9 @@
 """Eingabefelder für die Verwaltung: native Datums- und Uhrzeitauswahl des Browsers
 (auf dem Handy die gewohnten Picker), Zeiten und Dauern ohne Sekunden."""
+import ast
 import re
 from datetime import timedelta
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -50,6 +52,47 @@ class DauerFeld(forms.Field):
             return self.to_python(data) != self.to_python(self.prepare_value(initial))
         except ValidationError:
             return True
+
+
+class PreisFeld(forms.DecimalField):
+    """Betrag direkt oder als Rechnung wie in Excel: „=24+(2*8)+4+5“ (Komma oder Punkt als Dezimalzeichen).
+    eingabe.js rechnet schon beim Verlassen des Felds; hier ist die Rechnung der Rückfall ohne JavaScript."""
+
+    widget = forms.TextInput
+    OPERATOREN = {ast.Add: lambda a, b: a + b, ast.Sub: lambda a, b: a - b,
+                  ast.Mult: lambda a, b: a * b, ast.Div: lambda a, b: a / b}
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault("localize", True)   # Anzeige mit Dezimalkomma: 53,00
+        super().__init__(**kwargs)
+
+    def to_python(self, value):
+        if isinstance(value, str):
+            text = value.strip().lstrip("=").replace(",", ".")
+            if re.search(r"[-+*/()]", text.lstrip("+-")):
+                return self.rechnen(text)
+            value = text
+        return super().to_python(value)
+
+    def rechnen(self, text):
+        def wert(knoten):
+            if isinstance(knoten, ast.Expression):
+                return wert(knoten.body)
+            if isinstance(knoten, ast.Constant) and type(knoten.value) in (int, float):
+                return Decimal(str(knoten.value))
+            if isinstance(knoten, ast.UnaryOp) and isinstance(knoten.op, (ast.UAdd, ast.USub)):
+                return -wert(knoten.operand) if isinstance(knoten.op, ast.USub) else wert(knoten.operand)
+            if isinstance(knoten, ast.BinOp) and type(knoten.op) in self.OPERATOREN:
+                return self.OPERATOREN[type(knoten.op)](wert(knoten.left), wert(knoten.right))
+            raise ValueError(knoten)
+
+        try:
+            if len(text) > 200:
+                raise ValueError(text)
+            return wert(ast.parse(text, mode="eval")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        except (SyntaxError, ValueError, ArithmeticError, InvalidOperation):
+            raise ValidationError("Rechnung nicht verständlich – erlaubt sind Zahlen, + − * / und Klammern, "
+                                  "z. B. =24+(2*8)+4+5.", code="invalid")
 
 
 class PickerMixin:

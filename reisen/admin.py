@@ -12,7 +12,7 @@ from konten.mandant import FamilienMixin
 from orte.models import Ort
 from portal.templatetags.urlaub import dauer, euro, km
 
-from .formulare import PickerMixin
+from .formulare import PickerMixin, PreisFeld
 from .models import Buchung, Erinnerung, Etappe, Kostenposition, Link, Reise
 from .routing import profil_hinweis, reise_routen
 
@@ -71,6 +71,9 @@ def routing_text(etappe):
     return " · ".join(teile)
 
 
+PREIS_TIPP = "Betrag oder Rechnung wie in Excel, z. B. =24+(2*8)+4+5"
+
+
 class BuchungForm(forms.ModelForm):
     """Währung und Kurs nur bei Fremdwährung (Haken); ohne Haken gilt Euro."""
 
@@ -79,11 +82,14 @@ class BuchungForm(forms.ModelForm):
     class Meta:
         model = Buchung
         fields = "__all__"
+        field_classes = {"preis_pro_nacht": PreisFeld, "gesamtpreis": PreisFeld}
+        help_texts = {"preis_pro_nacht": "auch ausrechnen wie in Excel, z. B. =24+(2*8)+4+5"}
         widgets = {"waehrung": forms.TextInput(attrs={"size": 4, "maxlength": 3}),
                    "wechselkurs": forms.NumberInput(attrs={"style": "width:7em", "step": "0.0001"}),
                    "anzahlung": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
-                   "preis_pro_nacht": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
-                   "gesamtpreis": forms.NumberInput(attrs={"style": "width:7em", "step": "0.01"}),
+                   # Text statt Zahl: erlaubt Rechnungen wie „=24+(2*8)+4+5“ (PreisFeld, eingabe.js)
+                   "preis_pro_nacht": forms.TextInput(attrs={"style": "width:7em", "title": PREIS_TIPP}),
+                   "gesamtpreis": forms.TextInput(attrs={"style": "width:7em", "title": PREIS_TIPP}),
                    "buchungsnummer": forms.TextInput(attrs={"size": 14}),
                    "stellplatz": forms.TextInput(attrs={"size": 10})}
 

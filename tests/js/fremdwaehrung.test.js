@@ -33,7 +33,26 @@ ok("Haken entfernen: Euro", q("buchungen-1-waehrung").value + " " + q("buchungen
 // Preis-Hinweis und Löschmarkierung funktionieren im Block
 q("buchungen-1-preis_pro_nacht").value = "30";
 q("buchungen-1-preis_pro_nacht").dispatchEvent(new w.Event("input", { bubbles: true }));
-ok("Block: Gesamtpreis-Hinweis", q("buchungen-1-gesamtpreis").placeholder, "= 120.00");
+ok("Block: Gesamtpreis-Hinweis", q("buchungen-1-gesamtpreis").placeholder, "= 120,00");
 q("buchungen-1-DELETE").checked = true;
 q("buchungen-1-DELETE").dispatchEvent(new w.Event("change", { bubbles: true }));
 ok("Block: Löschmarkierung", d.getElementById("buchungen-1").classList.contains("zum-loeschen"), true);
+// Preis als Rechnung wie in Excel
+const ppn = q("buchungen-1-preis_pro_nacht");
+ppn.value = "=24+(2*8)+4+9";
+ppn.dispatchEvent(new w.Event("input", { bubbles: true }));
+ok("Rechnung beim Tippen: Gesamtpreis-Hinweis", q("buchungen-1-gesamtpreis").placeholder, "= 212,00");
+ppn.dispatchEvent(new w.Event("change", { bubbles: true }));
+ok("Rechnung ausgewertet", ppn.value, "53,00");
+ok("Rechnung als Tooltip", ppn.title, "=24+(2*8)+4+9");
+ppn.value = "=8,5*2";
+ppn.dispatchEvent(new w.Event("change", { bubbles: true }));
+ok("Rechnung mit Komma", ppn.value, "17,00");
+ppn.value = "=24+";
+ppn.dispatchEvent(new w.Event("change", { bubbles: true }));
+ok("unvollständige Rechnung bleibt stehen", ppn.value, "=24+");
+ok("unvollständige Rechnung gemeldet", ppn.validationMessage !== "", true);
+ppn.value = "30,50";
+ppn.dispatchEvent(new w.Event("change", { bubbles: true }));
+ok("einfacher Betrag bleibt", ppn.value, "30,50");
+ok("Meldung wieder weg", ppn.validationMessage, "");

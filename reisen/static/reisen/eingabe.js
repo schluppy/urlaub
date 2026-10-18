@@ -10,8 +10,13 @@
              sonst Anreise = Abreise der vorherigen Buchung. Abreise frühestens Anreise + 1.
              Bei Wahl eines Platzes werden Anreise/Abreise aus dessen Aufenthalt übernommen.
              Preis/Nacht ↔ Gesamtpreis: das leere Feld zeigt den umgerechneten Wert als Platzhalter.
+             Beide Felder rechnen wie Excel: „=24+(2*8)+4+5“ wird beim Verlassen zu 52,00
+             (die Rechnung bleibt als Tooltip stehen).
    - Etappen und Buchungen als Blöcke (mehrere Zeilen je Eintrag); Währung und Kurs nur mit Haken „Fremdwährung“.
-   - Alle Daten nur innerhalb der Reisezeit (von … bis), nicht des Urlaubs. */
+   - Alle Daten nur innerhalb der Reisezeit (von … bis), nicht des Urlaubs.
+   - Zeitraum der Reise: „bis“ startet mit dem „von“-Datum (Urlaub und Reisezeit), die Reisezeit mit dem
+             Urlaub – so öffnet die Datumsauswahl nicht beim heutigen Tag. Überschrieben werden nur leere,
+             selbst vorbelegte oder zu frühe Felder; von Hand gewählte Daten bleiben. */
 (function () {
   "use strict";
 
@@ -26,6 +31,32 @@
     const d = new Date(iso + "T12:00:00");
     d.setDate(d.getDate() + tage);
     return d.toISOString().slice(0, 10);
+  }
+
+  // Zeitraum der Reise: Feld → Felder, die es vorbelegt
+  const ZEITRAUM = { id_urlaub_von: ["id_urlaub_bis", "id_von"], id_urlaub_bis: ["id_bis"], id_von: ["id_bis"] };
+  const BIS_ZU = { id_urlaub_bis: "id_urlaub_von", id_bis: "id_von" };   // „bis“ nicht vor seinem „von“
+  function zeitraumVorbelegen(id) {
+    const quelle = document.getElementById(id);
+    if (!quelle || !quelle.value) return;
+    ZEITRAUM[id].forEach((zielId) => {
+      const ziel = document.getElementById(zielId);
+      if (!ziel) return;
+      const zuFrueh = BIS_ZU[zielId] && ziel.value && ziel.value < wert(BIS_ZU[zielId]);
+      // vorbelegt: von derselben Quelle nachziehen, von einer anderen nur nach hinten (Reisezeit bis
+      // folgt Urlaub bis, eine frühere Abfahrt verkürzt sie nicht)
+      const nachziehen = ziel.dataset.vorbelegt && (ziel.dataset.vorbelegt === id || quelle.value > ziel.value);
+      if (ziel.value && !nachziehen && !zuFrueh) return;
+      ziel.value = quelle.value;
+      ziel.dataset.vorbelegt = id;
+      if (ZEITRAUM[zielId]) zeitraumVorbelegen(zielId);
+    });
+  }
+  function zeitraumGrenzen() {
+    Object.keys(BIS_ZU).forEach((bisId) => {
+      const bis = document.getElementById(bisId);
+      if (bis) bis.min = wert(BIS_ZU[bisId]);
+    });
   }
 
   // sichtbare Zeilen eines Inlines in Anzeige-Reihenfolge (ohne Vorlage und gelöschte)
@@ -134,8 +165,46 @@
   }
   function grenzen() { etappenGrenzen(); buchungenGrenzen(); zeilen("buchungen").forEach(preisHinweis); buchungenSperre(); }
 
+  // Rechnung wie in Excel: Zahlen (Komma oder Punkt), + - * / und Klammern; sonst null
+  function rechnen(text) {
+    const zeichen = String(text).replace(/^\s*=/, "").replace(/,/g, ".").match(/\d+(?:\.\d*)?|\.\d+|[-+*\/()]|\S/g) || [];
+    let i = 0;
+    function summe() {
+      let w = produkt();
+      while (zeichen[i] === "+" || zeichen[i] === "-") w = zeichen[i++] === "+" ? w + produkt() : w - produkt();
+      return w;
+    }
+    function produkt() {
+      let w = faktor();
+      while (zeichen[i] === "*" || zeichen[i] === "/") w = zeichen[i++] === "*" ? w * faktor() : w / faktor();
+      return w;
+    }
+    function faktor() {
+      const z = zeichen[i++];
+      if (z === "-") return -faktor();
+      if (z === "+") return faktor();
+      if (z === "(") { const w = summe(); if (zeichen[i++] !== ")") throw new Error(); return w; }
+      if (z !== undefined && /^[\d.]/.test(z)) return parseFloat(z);
+      throw new Error();
+    }
+    try {
+      const w = summe();
+      return i === zeichen.length && isFinite(w) ? w : null;
+    } catch (e) { return null; }
+  }
+  function betrag(w) { return w.toFixed(2).replace(".", ","); }   // deutsches Dezimalkomma
+  function preisRechnen(el) {
+    const text = el.value.trim();
+    el.setCustomValidity("");
+    if (!/^=|\d\s*[-+*\/]|[()]/.test(text)) return;   // einfacher Betrag: so lassen
+    const w = rechnen(text);
+    if (w === null) { el.setCustomValidity("Rechnung nicht verständlich, z. B. =24+(2*8)+4+5"); el.reportValidity && el.reportValidity(); return; }
+    el.value = betrag(w);
+    el.title = text;   // Rechnung zum Nachsehen
+  }
+
   // Preis/Nacht oder Gesamtpreis: das jeweils andere Feld zeigt den umgerechneten Wert grau an
-  function zahl(text) { const n = parseFloat(String(text).replace(",", ".")); return isNaN(n) ? null : n; }
+  function zahl(text) { return String(text).trim() ? rechnen(text) : null; }   // auch Rechnungen beim Tippen
   function preisHinweis(zeile) {
     const ppn = feld(zeile, "preis_pro_nacht"), gesamt = feld(zeile, "gesamtpreis");
     const von = feld(zeile, "von"), bis = feld(zeile, "bis");
@@ -143,8 +212,8 @@
     const naechte = von.value && bis.value
       ? Math.round((new Date(bis.value) - new Date(von.value)) / 86400000) : 0;
     const p = zahl(ppn.value), g = zahl(gesamt.value);
-    gesamt.placeholder = p !== null && naechte > 0 ? "= " + (p * naechte).toFixed(2) : "";
-    ppn.placeholder = g !== null && naechte > 0 ? "≈ " + (g / naechte).toFixed(2) : "";
+    gesamt.placeholder = p !== null && naechte > 0 ? "= " + betrag(p * naechte) : "";
+    ppn.placeholder = g !== null && naechte > 0 ? "≈ " + betrag(g / naechte) : "";
   }
 
   // Aufenthalte laut gespeicherten Etappen: [{ort, von, bis}], vom Server als JSON eingebettet
@@ -228,6 +297,15 @@
   document.addEventListener("change", (ev) => {
     etappeBearbeitet(ev);
     const el = ev.target;
+    if (el.id in ZEITRAUM || el.id in BIS_ZU) {
+      delete el.dataset.vorbelegt;   // von Hand gewählt
+      if (el.id in ZEITRAUM) zeitraumVorbelegen(el.id);
+      zeitraumGrenzen();
+    }
+    if (el.matches("input[name$='-preis_pro_nacht'], input[name$='-gesamtpreis']")) {
+      preisRechnen(el);
+      preisHinweis(eintrag(el));
+    }
     if (el.matches("input[name$='-fremdwaehrung']")) {
       const zeile = eintrag(el);
       if (zeile) { waehrungZeigen(zeile); preisHinweis(zeile); }
@@ -254,6 +332,7 @@
       if (haken && reihe) reihe.hidden = !haken.checked;   // nur ein-/ausblenden, Werte bleiben
     });
     sperrStil();
+    zeitraumGrenzen();
     grenzen();
     loeschMarkierung();
     // Von/Nach sind Autocomplete-Felder (select2) – deren Änderung kommt nur als jQuery-Ereignis
