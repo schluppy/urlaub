@@ -6,3 +6,6 @@ db.sqlite3
 staticfiles
 import
 **/__pycache__
+android/.gradle
+android/app/build
+android/build

@@ -1,0 +1,59 @@
+{% extends "portal/base.html" %}
+{% load static %}
+{% block titel %}Handy-Widget{% endblock %}
+{% block kopf %}<script src="{% static 'freigaben/teilen.js' %}" defer></script>{% endblock %}
+{% block inhalt %}
+<p class="brotkrumen"><a href="{% url 'kalender:start' %}">Kalender</a></p>
+<h1>Countdown auf dem Handy</h1>
+<p>Das Widget für den Startbildschirm (Android) zählt die Tage bis zur nächsten Reise herunter –
+bis zum Start der ersten Etappe. Ist die Reise losgegangen, zeigt es die folgende.
+Es holt die Reisen einmal am Tag; in der App lässt sich das jederzeit von Hand anstoßen.</p>
+
+<section class="flaeche" aria-labelledby="app">
+  <h2 id="app">1. App installieren</h2>
+  {% if apk %}
+  <p><a class="knopf" href="{% url 'freigaben:widget_apk' %}">App herunterladen</a></p>
+  <ol>
+    <li>Auf dem <b>Handy</b> in Chrome diese Seite öffnen und <b>„App herunterladen“</b> tippen.</li>
+    <li>Die Datei <b>urlaubswidget.apk</b> öffnen. Beim ersten Mal fragt Android, ob Chrome Apps installieren darf:
+        <b>„Einstellungen“ → „Dieser Quelle vertrauen“</b> einschalten, zurück, <b>„Installieren“</b>.</li>
+    <li>Google Play Protect meldet „App wurde zum Schutz deines Geräts blockiert“. <b>Nicht auf „OK“ tippen</b> –
+        das bricht die Installation ab. Stattdessen den unscheinbaren Text <b>„Trotzdem installieren“</b> direkt
+        darüber antippen.</li>
+  </ol>
+  <p class="leise klein">Die Warnung kommt bei jeder App, die nicht aus dem Play Store stammt. Fragt Play Protect danach,
+    ob es die App zur Prüfung an Google senden soll, ist beides in Ordnung.</p>
+  {% else %}
+  <p class="leise">Die App ist auf diesem Server noch nicht hinterlegt.</p>
+  {% endif %}
+</section>
+
+{% if zugang %}
+<section class="flaeche betont" aria-labelledby="link">
+  <h2 id="link">2. Widget einrichten</h2>
+  <p><a class="knopf" href="{{ zugang.einrichten }}">Widget einrichten</a></p>
+  <p>Auf dem Handy tippen: Die App öffnet sich und übernimmt deinen Link. Danach lange auf eine freie Stelle
+     des Startbildschirms drücken → <b>„Widgets“</b> → <b>„Urlaub“</b> auf den Bildschirm ziehen.</p>
+  <p class="leise klein">Klappt der Knopf nicht, den Link kopieren und in der App einfügen.
+    Geheim halten: Wer den Link kennt, sieht eure nächsten Reisen. Erstellt {{ zugang.erstellt_am|date:"d.m.Y" }}
+    · {{ zugang.abrufe }} Abruf{{ zugang.abrufe|pluralize:"e" }}{% if zugang.zuletzt_am %}, zuletzt {{ zugang.zuletzt_am|date:"d.m. H:i" }}{% endif %}</p>
+  <input class="link-feld" type="text" readonly value="{{ zugang.link }}" aria-label="Widget-Link" onclick="this.select()">
+  <div class="teilen-knoepfe">
+    <button type="button" class="knopf zweit" data-kopieren="{{ zugang.link }}">Link kopieren</button>
+  </div>
+  <form method="post" class="aktionen">
+    {% csrf_token %}
+    <button class="knopf zweit" type="submit" name="aktion" value="erzeugen">Neuen Link erzeugen</button>
+    <button class="knopf gefahr" type="submit" name="aktion" value="beenden">Link beenden</button>
+  </form>
+  <p class="leise klein">Ein neuer Link ersetzt den bisherigen; danach das Widget mit dem neuen Link neu einrichten.</p>
+</section>
+{% else %}
+<form method="post" class="flaeche">
+  {% csrf_token %}
+  <h2>2. Widget einrichten</h2>
+  <p>Dafür brauchst du einen eigenen, geheimen Link. Er zeigt die Reisen der Familie {{ user.familie }}.</p>
+  <button class="knopf" type="submit" name="aktion" value="erzeugen">Widget-Link erzeugen</button>
+</form>
+{% endif %}
+{% endblock %}

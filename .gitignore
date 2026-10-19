@@ -15,3 +15,10 @@ reisen/management/commands/import_2026.py
 tests/test_import.py
 BETRIEB-LOKAL.md
 betrieb/backup-dateien.txt
+
+# Handy-Widget: Build-Ausgaben und die fertige APK
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+/widget/

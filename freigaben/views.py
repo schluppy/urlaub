@@ -2,7 +2,8 @@ from datetime import date, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import Http404, HttpResponse
+from django.conf import settings
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
@@ -17,7 +18,8 @@ from reisen.views import kartendaten
 
 from .forms import FreigabeForm
 from .ical import kalender as ical_kalender
-from .models import MAX_TAGE, Art, Freigabe, Kalenderabo
+from .models import MAX_TAGE, Art, Freigabe, Kalenderabo, Widgetzugang
+from .widget import daten as widget_daten_fuer
 
 
 def _familie(request):
@@ -157,4 +159,46 @@ def abo_feed(request, token):
     antwort["Content-Disposition"] = 'inline; filename="urlaube.ics"'
     antwort["X-Robots-Tag"] = "noindex, nofollow"
     antwort["Cache-Control"] = "private, max-age=3600"
+    return antwort
+
+
+# --- Handy-Widget (Countdown bis zum nächsten Urlaub) ----------------------------
+
+APK = settings.BASE_DIR / "widget" / "urlaubswidget.apk"
+
+
+@login_required
+def widget(request):
+    """App herunterladen und eigenen Widget-Link anzeigen, neu erzeugen oder beenden."""
+    _familie(request)
+    aktiv = request.user.widgetzugaenge.filter(beendet_am__isnull=True).first()
+    if request.method == "POST":
+        if aktiv:
+            aktiv.beenden()
+        if request.POST.get("aktion") == "erzeugen":
+            Widgetzugang.objects.create(person=request.user)
+            messages.success(request, "Neuer Widget-Link erstellt." + (" Der bisherige funktioniert nicht mehr." if aktiv else ""))
+        else:
+            messages.success(request, "Der Widget-Link funktioniert nicht mehr.")
+        return redirect("freigaben:widget")
+    return render(request, "freigaben/widget.html", {"zugang": aktiv, "apk": APK.exists()})
+
+
+@login_required
+def widget_apk(request):
+    if not APK.exists():
+        raise Http404
+    return FileResponse(APK.open("rb"), as_attachment=True, filename="urlaubswidget.apk",
+                        content_type="application/vnd.android.package-archive")
+
+
+def widget_daten(request, token):
+    """Die nächsten Reisen als JSON – ohne Anmeldung, nur mit gültigem, geheimem Link."""
+    zugang = Widgetzugang.objects.select_related("person__familie").filter(token=token).first()
+    if zugang is None or not zugang.aktiv:
+        raise Http404
+    zugang.abgerufen()
+    antwort = JsonResponse(widget_daten_fuer(zugang.person.familie), json_dumps_params={"ensure_ascii": False})
+    antwort["X-Robots-Tag"] = "noindex, nofollow"
+    antwort["Cache-Control"] = "private, no-cache"
     return antwort

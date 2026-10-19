@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/app_name"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/kreis"
+            android:layout_width="160dp"
+            android:layout_height="160dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="20dp"
+            android:contentDescription="@string/widget_beschreibung" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:lineSpacingExtra="4dp"
+            android:textSize="16sp" />
+
+        <Button
+            android:id="@+id/aktualisieren"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Jetzt aktualisieren" />
+
+        <Button
+            android:id="@+id/oeffnen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Reise im Urlaubsplaner öffnen" />
+
+        <Button
+            android:id="@+id/hinzufuegen"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Widget auf den Startbildschirm" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:text="Widget-Link"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:alpha="0.7"
+            android:text="Im Urlaubsplaner unter Kalender → Handy-Widget. Dort richtet der Knopf „Widget einrichten“ alles von selbst ein."
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/url"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="https://…/teilen/widget/….json"
+            android:importantForAutofill="no"
+            android:inputType="textUri" />
+
+        <Button
+            android:id="@+id/speichern"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Link speichern" />
+    </LinearLayout>
+</ScrollView>

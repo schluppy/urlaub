@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Sonne über Wellen; der sichtbare Bereich eines adaptiven Icons sind die inneren 66 von 108 dp -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFC94D" android:pathData="M54,32 A14,14 0 1,1 53.99,32 Z" />
+    <path android:strokeColor="#4DD0E1" android:strokeWidth="5" android:strokeLineCap="round"
+        android:pathData="M34,66 Q39,61 44,66 T54,66 T64,66 T74,66" />
+    <path android:strokeColor="#4DD0E1" android:strokeWidth="5" android:strokeLineCap="round"
+        android:pathData="M38,76 Q43,71 48,76 T58,76 T68,76" />
+</vector>

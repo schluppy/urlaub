@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Urlaub-Countdown</string>
+    <string name="widget_name">Urlaub</string>
+    <string name="widget_beschreibung">Tage bis zur nächsten Reise</string>
+</resources>

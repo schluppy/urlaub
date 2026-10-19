@@ -132,3 +132,44 @@ class Kalenderabo(models.Model):
         if self.beendet_am is None:
             self.beendet_am = timezone.now()
             self.save(update_fields=["beendet_am"])
+
+
+class Widgetzugang(models.Model):
+    """Geheimer Link für das Handy-Widget „Countdown bis zum nächsten Urlaub“.
+    Je Person höchstens ein aktiver Link; das Widget zeigt die Reisen ihrer Familie."""
+
+    person = models.ForeignKey("konten.Person", on_delete=models.CASCADE, related_name="widgetzugaenge")
+    token = models.CharField(max_length=60, unique=True, default=abo_token, editable=False)
+    erstellt_am = models.DateTimeField(auto_now_add=True)
+    beendet_am = models.DateTimeField("beendet am", null=True, blank=True)
+    abrufe = models.PositiveIntegerField("Abrufe", default=0)
+    zuletzt_am = models.DateTimeField("zuletzt abgerufen", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Widget-Zugang"
+        verbose_name_plural = "Widget-Zugänge"
+        ordering = ["-erstellt_am"]
+
+    def __str__(self):
+        return f"Widget-Zugang {self.person}"
+
+    @property
+    def aktiv(self):
+        return self.beendet_am is None and self.person.is_active and self.person.familie_id is not None
+
+    @property
+    def link(self):
+        return settings.BASIS_URL + reverse("freigaben:widget_daten", args=[self.token])
+
+    @property
+    def einrichten(self):
+        """Öffnet die App auf dem Handy und übergibt ihr den Link."""
+        return "urlaubswidget://einrichten?url=" + quote(self.link, safe="")
+
+    def abgerufen(self):
+        Widgetzugang.objects.filter(pk=self.pk).update(abrufe=models.F("abrufe") + 1, zuletzt_am=timezone.now())
+
+    def beenden(self):
+        if self.beendet_am is None:
+            self.beendet_am = timezone.now()
+            self.save(update_fields=["beendet_am"])
