@@ -4,7 +4,8 @@
 #
 # Sichert nach $ZIEL (Standard /var/backups/urlaub), höchstens $BACKUP_TAGE Tage (Standard 14):
 #   db-JJJJ-MM-TT.dump       Datenbank (pg_dump, Custom-Format)
-#   konfig-JJJJ-MM-TT.tgz    .env, msmtprc, msmtp.env und die Dateien aus betrieb/backup-dateien.txt
+#   konfig-JJJJ-MM-TT.tgz    .env, msmtprc, msmtp.env, die Dateien aus betrieb/backup-dateien.txt
+#                            und der Signierschlüssel des Handy-Widgets (~/.urlaubswidget des Projekteigentümers)
 # Optional zusätzlich: BACKUP_EXTERN=/pfad (in .env), z. B. ein eingebundenes Netzlaufwerk.
 # Schlägt die Kopie nach außen fehl, bleibt die lokale Sicherung erhalten (Exit-Code 2).
 set -eu
@@ -21,6 +22,10 @@ EXTERN=${BACKUP_EXTERN:-$(wert BACKUP_EXTERN)}
 DB=$(wert POSTGRES_DB); DB=${DB:-urlaub}
 DB_USER=$(wert POSTGRES_USER); DB_USER=${DB_USER:-urlaub}
 STAMP=$(date +%F)
+# Signierschlüssel des Handy-Widgets (android/bauen.sh): ohne ihn lassen sich keine App-Updates installieren.
+# Liegt im Home des Projekteigentümers, nicht von root; abweichend in .env: WIDGET_SCHLUESSEL=/pfad
+WIDGET=${WIDGET_SCHLUESSEL:-$(wert WIDGET_SCHLUESSEL)}
+WIDGET=${WIDGET:-$(getent passwd "$(stat -c %U "$PROJEKT")" | cut -d: -f6)/.urlaubswidget}
 
 mkdir -p "$ZIEL"
 chmod 700 "$ZIEL"
@@ -37,7 +42,13 @@ if [ -f betrieb/backup-dateien.txt ]; then
         [ -e "$f" ] && echo "$f" >> "$LISTE" || echo "Hinweis: $f fehlt, nicht gesichert"
     done
 fi
-tar czf "$ZIEL/konfig-$STAMP.tgz" -T "$LISTE"
+if [ -d "$WIDGET" ]; then
+    # landet im Archiv als .urlaubswidget/…
+    tar czf "$ZIEL/konfig-$STAMP.tgz" -T "$LISTE" -C "$(dirname "$WIDGET")" "$(basename "$WIDGET")"
+else
+    echo "Hinweis: $WIDGET fehlt, Widget-Schlüssel nicht gesichert"
+    tar czf "$ZIEL/konfig-$STAMP.tgz" -T "$LISTE"
+fi
 rm -f "$LISTE"
 chmod 600 "$ZIEL/db-$STAMP.dump" "$ZIEL/konfig-$STAMP.tgz"
 
