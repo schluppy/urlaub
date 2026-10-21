@@ -14,7 +14,7 @@ import java.time.ZoneId
 
 /**
  * Das Widget rechnet die Tage selbst und zeichnet sich kurz nach Mitternacht (und zur Startzeit) neu.
- * Den Urlaubsplaner fragt es höchstens einmal am Tag; „Jetzt aktualisieren“ in der App jederzeit.
+ * Den Urlaubsplaner fragt der [AbrufDienst] höchstens einmal am Tag; „Jetzt aktualisieren“ in der App jederzeit.
  */
 class WidgetProvider : AppWidgetProvider() {
 
@@ -29,26 +29,16 @@ class WidgetProvider : AppWidgetProvider() {
 
     override fun onDisabled(context: Context) {
         context.getSystemService(AlarmManager::class.java).cancel(wecker(context))
+        AbrufDienst.abbrechen(context)
     }
 
     private fun aktualisieren(context: Context) {
         zeichnen(context)
-        val speicher = Speicher(context)
-        if (speicher.url == null || System.currentTimeMillis() - speicher.stand < EIN_TAG) return
-        val ergebnis = goAsync()
-        Thread {
-            try {
-                speicher.abrufen()
-                zeichnen(context)
-            } finally {
-                ergebnis.finish()
-            }
-        }.start()
+        AbrufDienst.planen(context)
     }
 
     companion object {
         private const val NEU_ZEICHNEN = "de.urlaubsplaner.widget.NEU_ZEICHNEN"
-        private const val EIN_TAG = 20L * 60 * 60 * 1000   // etwas kürzer, damit der tägliche Abruf nicht knapp verpasst wird
 
         /** Alle Widgets neu zeichnen und den nächsten Wecker stellen. */
         fun zeichnen(context: Context) {

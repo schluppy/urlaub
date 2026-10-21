@@ -70,6 +70,7 @@ class MainActivity : Activity() {
         }
         speicher.url = url
         findViewById<EditText>(R.id.url).setText(url)
+        AbrufDienst.planen(this)
         abrufen()
     }
 
