@@ -162,6 +162,7 @@ class Route:
     abfahrt: str = ""
     wirksam: dict = field(default_factory=dict)
     linie: list = field(default_factory=list)    # vereinfachter Streckenverlauf [[lat, lon], …]
+    verlauf: list = field(default_factory=list)  # nur auf Wunsch: [(lat, lon, Sekunden, Meter), …] ab Start
 
     def als_details(self):
         return {
@@ -205,9 +206,10 @@ def vereinfachen(punkte, toleranz=LINIE_TOLERANZ_GRAD):
     return [[round(punkte[i][0], 5), round(punkte[i][1], 5)] for i in sorted(behalten)]
 
 
-def berechne_route(start, ziel, profil=None, abfahrt=None, vignetten_meiden="", familie=None):
+def berechne_route(start, ziel, profil=None, abfahrt=None, vignetten_meiden="", familie=None, verlauf=False):
     """Route zwischen zwei Punkten (lat, lon). `abfahrt` als aware datetime;
-    liegt sie in der Vergangenheit, rechnet TomTom ohne Verkehrsprognose."""
+    liegt sie in der Vergangenheit, rechnet TomTom ohne Verkehrsprognose.
+    Mit `verlauf` liefert TomTom zu Punkten der Linie die bis dahin gefahrene Zeit und Strecke."""
     params = {
         "travelMode": "bus",          # wie der TomTom-Web-Planer; Maße wirken (geprüft)
         "routeType": "fastest",
@@ -216,6 +218,8 @@ def berechne_route(start, ziel, profil=None, abfahrt=None, vignetten_meiden="", 
         "routeRepresentation": "polyline",   # Streckenverlauf für die Karte
         **fahrzeug_parameter(profil),
     }
+    if verlauf:
+        params["extendedRouteRepresentation"] = ["travelTime", "distance"]
     abfahrt_text = ""
     if abfahrt and abfahrt > timezone.now():
         abfahrt_text = timezone.localtime(abfahrt).replace(tzinfo=None).isoformat(timespec="seconds")
@@ -251,13 +255,55 @@ def berechne_route(start, ziel, profil=None, abfahrt=None, vignetten_meiden="", 
                if e["key"].startswith("vehicle") or e["key"] in ("travelMode", "departAt")}
     verbrauch = s.get("fuelConsumptionInLiters")
     punkte = [(p["latitude"], p["longitude"]) for leg in r.get("legs", []) for p in leg.get("points", [])]
+    fortschritt = [(*punkte[f["pointIndex"]], f.get("travelTimeInSeconds", 0), f.get("distanceInMeters", 0))
+                   for f in r.get("progress", []) if f["pointIndex"] < len(punkte)]
     return Route(
         entfernung_km=(Decimal(s["lengthInMeters"]) / 1000).quantize(Decimal("0.1")),
         fahrzeit=timedelta(minutes=round(s["travelTimeInSeconds"] / 60)),   # Eingabe ohne Sekunden
         verkehr=timedelta(seconds=s.get("trafficDelayInSeconds", 0)),
         laender=laender, vignetten=vignetten, faehre=faehre,
         verbrauch_l=Decimal(str(verbrauch)).quantize(Decimal("0.1")) if verbrauch is not None else None,
-        abfahrt=abfahrt_text, wirksam=wirksam, linie=vereinfachen(punkte),
+        abfahrt=abfahrt_text, wirksam=wirksam, linie=vereinfachen(punkte), verlauf=fortschritt,
+    )
+
+
+def punkt_nach(verlauf, sekunden):
+    """Wo ist man nach `sekunden` reiner Fahrzeit? (lat, lon, Meter), zwischen zwei Punkten
+    des Verlaufs linear geschätzt. Über das Ende hinaus: der Zielpunkt."""
+    vorher = verlauf[0]
+    for p in verlauf:
+        if p[2] >= sekunden:
+            t = (sekunden - vorher[2]) / (p[2] - vorher[2]) if p[2] > vorher[2] else 1
+            return tuple(vorher[i] + t * (p[i] - vorher[i]) for i in (0, 1, 3))
+        vorher = p
+    return vorher[0], vorher[1], vorher[3]
+
+
+def abschnitt(verlauf, von_s, bis_s):
+    """Streckenverlauf zwischen zwei Fahrzeiten als [[lat, lon], …] für die Karte."""
+    innen = [(p[0], p[1]) for p in verlauf if von_s < p[2] < bis_s]
+    anfang, ende = punkt_nach(verlauf, von_s)[:2], punkt_nach(verlauf, bis_s)[:2]
+    return vereinfachen([anfang, *innen, ende])
+
+
+@dataclass
+class Ortsangabe:
+    name: str        # Gemeinde, z. B. „Beaune“
+    gegend: str      # Departement/Kreis, z. B. „Côte-d’Or“
+    land: str        # „Frankreich“
+    land_iso: str    # „FR“
+    adresse: str
+
+
+def ort_bei(lat, lon, familie=None):
+    """Koordinaten → nächstgelegene Adresse (Reverse Geocoding)."""
+    daten = _abrufen(f"{BASIS}/search/2/reverseGeocode/{lat:.6f},{lon:.6f}.json", {"language": "de-DE"},
+                     familie=familie, art="geocoding")
+    a = (daten.get("addresses") or [{}])[0].get("address", {})
+    return Ortsangabe(
+        name=a.get("municipality") or a.get("municipalitySubdivision") or a.get("countrySecondarySubdivision", ""),
+        gegend=a.get("countrySecondarySubdivision") or a.get("countrySubdivision", ""),
+        land=a.get("country", ""), land_iso=a.get("countryCode", ""), adresse=a.get("freeformAddress", ""),
     )
 
 

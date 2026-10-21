@@ -278,6 +278,9 @@ class Reise(models.Model):
         return hinweise
 
 
+LANGE_ETAPPE = timedelta(hours=8)   # ab hier bietet die Etappenliste „aufteilen“ an
+
+
 class Etappe(models.Model):
     reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="etappen")
     datum = models.DateField("Datum")
@@ -332,6 +335,11 @@ class Etappe(models.Model):
         if self.entfernung_km and self.verbrauch is not None:
             return self.entfernung_km * self.verbrauch / 100
         return None
+
+    @property
+    def ist_lang(self):
+        """Lange Etappe: die Etappenliste bietet „aufteilen“ an."""
+        return bool(self.fahrzeit and self.fahrzeit > LANGE_ETAPPE)
 
     @property
     def karten_link(self):

@@ -107,3 +107,56 @@ class PickerMixin:
         elif isinstance(db_field, models.TimeField):
             kwargs["widget"] = UhrzeitEingabe
         return super().formfield_for_dbfield(db_field, request, **kwargs)
+
+
+# --- Etappe aufteilen (Reiseseite, nicht Verwaltung) -------------------------
+
+
+class AufteilenForm(forms.Form):
+    start = forms.TimeField(label="Start", widget=UhrzeitEingabe)
+    fahrzeit = DauerFeld(label="Fahrzeit", help_text="reine Fahrt")
+    pause = DauerFeld(label="Pause", required=False)
+
+    def clean_fahrzeit(self):
+        wert = self.cleaned_data["fahrzeit"]
+        if wert <= timedelta():
+            raise ValidationError("Bitte eine Fahrzeit angeben.")
+        return wert
+
+    def clean_pause(self):
+        return self.cleaned_data["pause"] or timedelta()
+
+
+class TeilenForm(forms.Form):
+    """Platz für die Übernachtung: vorhandener Ort aus der Nähe oder neu aus Google Maps."""
+    ort = forms.TypedChoiceField(label="Vorhandener Ort", coerce=int, required=False, empty_value=None)
+    name = forms.CharField(label="Name", max_length=150, required=False)
+    google = forms.CharField(label="Google Maps", required=False,
+                             help_text="Link aus Google Maps („Teilen“ → „Link kopieren“) oder Koordinaten")
+    website = forms.URLField(label="Website", max_length=500, required=False, assume_scheme="https")
+    weiter_um = forms.TimeField(label="Weiter am Folgetag um", widget=UhrzeitEingabe)
+
+    def __init__(self, *args, orte=(), familie=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.familie = familie
+        self.fields["ort"].choices = [("", "– neuer Platz –")] + [(o.pk, f"{o.name} ({d} km)") for d, o in orte]
+
+    def clean(self):
+        from orte.google import KeineKoordinaten, koordinaten
+        from orte.models import Ort
+
+        daten = super().clean()
+        if daten.get("ort"):
+            return daten
+        if not daten.get("name"):
+            self.add_error("name", "Namen des Platzes eintragen – oder oben einen vorhandenen Ort wählen.")
+        elif Ort.objects.filter(familie=self.familie, name=daten["name"]).exists():
+            self.add_error("name", "Einen Ort mit diesem Namen gibt es schon.")
+        if not daten.get("google"):
+            self.add_error("google", "Link oder Koordinaten aus Google Maps einfügen.")
+        else:
+            try:
+                daten["breite"], daten["laenge"] = koordinaten(daten["google"])
+            except KeineKoordinaten as e:
+                self.add_error("google", str(e))
+        return daten

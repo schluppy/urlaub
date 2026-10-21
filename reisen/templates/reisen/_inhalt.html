@@ -43,6 +43,7 @@
     <td>{% include "reisen/_ort.html" with ort=e.von_ort %} → {% include "reisen/_ort.html" with ort=e.nach_ort %}
       {% if not pdf and e.karten_link %}<a class="klein" href="{{ e.karten_link }}" target="_blank" rel="noopener" title="Route in Google Maps">Google</a>{% endif %}
       {% if not pdf and e.adac_link %}<a class="klein" href="{{ e.adac_link }}" target="_blank" rel="noopener" title="Route mit Maut in ADAC Maps">ADAC</a>{% endif %}
+      {% if not pdf and e.ist_lang %}· <a class="klein" href="{% url 'reisen:aufteilen' reise.pk e.pk %}" title="Wo seid ihr nach x Stunden Fahrt? Dort eine Übernachtung suchen und die Etappe teilen">aufteilen</a>{% endif %}
       {% if e.fahrzeugprofil %}<br><span class="leise klein">mit {{ e.fahrzeugprofil }}</span>{% endif %}</td>
     <td class="zahl">{{ e.startzeit|time:"H:i"|default:"–" }}</td>
     <td class="zahl">{{ e.fahrzeit|dauer }}</td>

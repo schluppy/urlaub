@@ -1,4 +1,5 @@
 import math
+from datetime import time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -9,7 +10,9 @@ from django.views.decorators.http import require_GET, require_POST
 from kalender.kalender import MONATSFARBEN
 from orte.models import Ortstyp
 
+from . import aufteilen as teilung
 from . import dokumente
+from .formulare import AufteilenForm, TeilenForm
 from .models import Reise
 from .routing import TomTomFehler, kachel, profil_hinweis, reise_routen
 
@@ -165,6 +168,61 @@ def route(request, pk):
     if hinweis := profil_hinweis(r):
         messages.warning(request, hinweis)
     return redirect("reisen:reise", pk)
+
+
+@login_required
+def aufteilen(request, pk, etappe):
+    """Lange Etappe: Haltepunkt nach x Stunden Fahrt zeigen und die Etappe an einem Platz teilen."""
+    r = _laden(request, pk)
+    etappe = next((e for e in r.etappen.all() if e.pk == etappe), None)
+    if etappe is None:
+        raise Http404
+    anfrage = request.POST if request.method == "POST" else request.GET
+    form = AufteilenForm(anfrage if "fahrzeit" in anfrage else None, initial={
+        "start": etappe.startzeit or time(8),
+        "fahrzeit": request.session.get("aufteilen_fahrzeit", "08:00"),
+        "pause": etappe.pause})
+    vorschlag, orte, teilen_form = None, [], None
+    if form.is_bound and form.is_valid():
+        d = form.cleaned_data
+        request.session["aufteilen_fahrzeit"] = form["fahrzeit"].value()
+        try:
+            vorschlag = teilung.vorschlag(etappe, d["start"], d["fahrzeit"], d["pause"])
+        except TomTomFehler as e:
+            messages.error(request, str(e))
+    if vorschlag:
+        orte = teilung.orte_in_der_naehe(etappe, vorschlag["lat"], vorschlag["lon"])
+        teilen_form = TeilenForm(request.POST if request.method == "POST" else None, orte=orte, familie=r.familie,
+                                 initial={"weiter_um": request.session.get("aufteilen_weiter", "08:00")})
+        if request.method == "POST" and teilen_form.is_valid():
+            t = teilen_form.cleaned_data
+            request.session["aufteilen_weiter"] = teilen_form["weiter_um"].value()
+            if t["ort"]:
+                ort = next(o for _, o in orte if o.pk == t["ort"])
+            else:
+                ort = teilung.neuer_ort(r.familie, t["name"], t["breite"], t["laenge"], t["website"])
+            neu, fehler = teilung.teilen(etappe, ort, t["weiter_um"])
+            for text in fehler:
+                messages.error(request, text)
+            if neu.ist_lang:
+                messages.success(request, f"Etappe geteilt: Übernachtung in {ort}. Jetzt kannst du den nächsten Tag aufteilen.")
+                return redirect("reisen:aufteilen", r.pk, neu.pk)
+            messages.success(request, f"Etappe geteilt: Übernachtung in {ort}.")
+            return redirect("reisen:reise", r.pk)
+    karte = None
+    if vorschlag:
+        karte = {"orte": [{"name": f"Haltepunkt bei {vorschlag['ort_name']}", "typ": "halt", "lat": vorschlag["lat"], "lon": vorschlag["lon"], "website": "",
+                           "aufenthalte": [], "sterne": ""}]
+                 + [{"name": o.name, "typ": o.typ, "lat": float(o.breite), "lon": float(o.laenge),
+                     "website": o.website, "aufenthalte": [f"{d} km vom Haltepunkt"], "sterne": o.sterne}
+                    for d, o in orte],
+                 "strecken": [{"punkte": vorschlag["linie"], "gerade": False, "text": str(etappe)},
+                              {"punkte": vorschlag["bereich"], "gerade": False, "farbe": "#E39226", "breite": 8,
+                               "text": "Hier lohnt die Suche"}],
+                 "ausschnitt": vorschlag["bereich"]}
+    return render(request, "reisen/aufteilen.html", {
+        "reise": r, "etappe": etappe, "form": form, "vorschlag": vorschlag, "teilen_form": teilen_form,
+        "folgetag": etappe.datum + timedelta(days=1), "karte": karte, "farbe": MONATSFARBEN[r.urlaub_beginn.month - 1]})
 
 
 def _datei(inhalt, name, typ, anzeigen=False):

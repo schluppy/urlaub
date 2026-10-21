@@ -22,6 +22,9 @@ Wie der Urlaubsplaner entstanden ist und wie er im Alltag aussieht, mit Bildern,
 - **Hinweise** auf Lücken: Etappen ohne Route, Nächte ohne Buchung, fällige Restzahlungen.
 - **TomTom-Routing** auf Knopfdruck mit Fahrzeugmaßen (Länge, Breite, Höhe, Gewicht, Achsen,
   Höchstgeschwindigkeit), Ländern, Vignettenpflicht und Fähren; Adressen werden geocodiert.
+- **Lange Etappen aufteilen:** Wo ist man nach x Stunden Fahrt (ab Startzeit, Pause verschiebt nur die
+  Ankunft)? Suchbereich ±30 Min. auf der Karte, Link zu Campingplätzen in Google Maps; die Etappe wird
+  dann am gefundenen Platz geteilt, die neue Etappe am Folgetag lässt sich weiter aufteilen.
 - **Karte** je Reise (Leaflet) mit Routenverlauf, umschaltbar zwischen OpenStreetMap und TomTom.
 - **Jahreskalender** als Seite und PDF (A4 quer): Monatsfarben, Feiertage, Schulferien, Urlaube.
 - **Exporte** je Reise: PDF und Excel mit echten Formeln; PDFs und Excel tragen den Stand (Datum und Uhrzeit)
@@ -114,6 +117,9 @@ Kopie in ein weiteres Verzeichnis, etwa ein eingebundenes Netzlaufwerk.
 - `avoidVignette` funktioniert nur im JSON-Body einer POST-Anfrage; ein leerer Body wird abgelehnt.
   Daher GET ohne, POST mit Vignetten-Vorgabe.
 - `departAt` nur für künftige Abfahrten; vergangene Etappen ohne Verkehrsprognose.
+- Etappe aufteilen (`reisen/aufteilen.py`): `extendedRouteRepresentation=travelTime,distance` liefert
+  Fahrzeit und Strecke entlang der Linie (`progress`); Ortsnamen per Reverse Geocoding. Ein Vorschlag
+  kostet 1 Routing- und 3 Geocoding-Abrufe und bleibt 6 h im Cache.
 - Kartenkacheln holt der Server ab, damit der API-Schlüssel nicht im Browser landet.
 - Familien ohne eigenen Schlüssel nutzen `TOMTOM_API_KEY` aus `.env`; jeder Abruf wird je Tag,
   Familie und Art gezählt (Verwaltung → TomTom-Nutzung).

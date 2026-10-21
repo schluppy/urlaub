@@ -1,0 +1,78 @@
+{% extends "portal/base.html" %}
+{% load static urlaub %}
+{% block titel %}Etappe aufteilen · {{ reise.titel }}{% endblock %}
+{% block kopf %}{% if karte %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
+<script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
+<script src="{% static 'reisen/karte.js' %}" defer></script>{% endif %}{% endblock %}
+{% block inhalt %}
+<p class="brotkrumen"><a href="{% url 'portal:jahr' reise.jahr %}">Reisen {{ reise.jahr }}</a> ›
+  <a href="{% url 'reisen:reise' reise.pk %}">{{ reise.titel }}</a></p>
+<div class="reisekopf" style="--monat: {{ farbe }}">
+  <h1>Etappe aufteilen</h1>
+  <p class="zeitraum-gross">{{ etappe.datum|date:"l, d.m.Y" }} · {{ etappe.von_ort }} → {{ etappe.nach_ort }}
+    {% if etappe.entfernung_km %}<br><span class="leise">{{ etappe.entfernung_km|km }} · {{ etappe.fahrzeit|dauer }} Fahrzeit laut TomTom</span>{% endif %}</p>
+</div>
+
+<form method="get" class="flaeche formzeile">
+  {% for feld in form %}
+  <div class="feld kurz">
+    <label for="{{ feld.id_for_label }}">{{ feld.label }}</label>
+    {{ feld }}
+    {% if feld.errors %}<p class="fehlertext">{{ feld.errors.0 }}</p>{% elif feld.help_text %}<p class="klein leise">{{ feld.help_text }}</p>{% endif %}
+  </div>
+  {% endfor %}
+  <div class="feld"><button class="knopf" type="submit">Berechnen</button></div>
+</form>
+
+{% if vorschlag %}
+<dl class="kennzahlen">
+  <div><dt>nach {{ vorschlag.fahrzeit|dauer }} Fahrt</dt><dd>{{ vorschlag.km|km }}</dd></div>
+  <div><dt>Ankunft{% if vorschlag.pause %} mit {{ vorschlag.pause|dauer }} Pause{% endif %}</dt><dd>{{ vorschlag.ankunft|time:"H:i" }}</dd></div>
+  <div><dt>danach noch</dt><dd>{{ vorschlag.rest_km|km }}</dd></div>
+  <div><dt>Restfahrzeit</dt><dd>{{ vorschlag.rest_zeit|dauer }}</dd></div>
+</dl>
+
+<div class="flaeche betont">
+  <p>Haltepunkt bei <b>{{ vorschlag.ort }}</b>.</p>
+  <p>Suchen lohnt sich {% if vorschlag.suche_von != vorschlag.suche_bis %}zwischen <b>{{ vorschlag.suche_von }}</b> und
+    <b>{{ vorschlag.suche_bis }}</b>{% else %}rund um <b>{{ vorschlag.suche_von }}</b>{% endif %}
+    <span class="leise">(eine halbe Stunde früher oder später, auf der Karte orange)</span>.</p>
+  <p><a class="knopf zweit" href="{{ vorschlag.google }}" target="_blank" rel="noopener">Campingplätze in Google Maps</a></p>
+</div>
+
+<div id="karte" class="karte" data-tomtom="{% url 'reisen:kachel' 0 0 0 %}" role="region" aria-label="Karte mit Haltepunkt"></div>
+<p class="klein leise karte-legende">
+  <span><i class="farbpunkt rund" style="background:#C0392B"></i>Haltepunkt</span>
+  <span><i class="farbpunkt" style="background:#E39226"></i>Suchbereich</span>
+  {% if teilen_form.fields.ort.choices|length > 1 %}<span><i class="farbpunkt rund" style="background:#8A4F9E"></i>eure Orte in der Nähe</span>{% endif %}
+</p>
+{{ karte|json_script:"kartendaten" }}
+
+<h2>Platz gefunden?</h2>
+<form method="post" class="flaeche">
+  {% csrf_token %}
+  {% for feld in form %}<input type="hidden" name="{{ feld.html_name }}" value="{{ feld.value|default_if_none:'' }}">{% endfor %}
+  {% with f=teilen_form %}
+  {% if f.fields.ort.choices|length > 1 %}
+  <div class="feld"><label for="{{ f.ort.id_for_label }}">{{ f.ort.label }}</label>{{ f.ort }}</div>
+  <p class="klein leise">oder neu anlegen:</p>
+  {% endif %}
+  <div class="formzeile">
+    <div class="feld"><label for="{{ f.name.id_for_label }}">Name des Platzes</label>{{ f.name }}
+      {% if f.name.errors %}<p class="fehlertext">{{ f.name.errors.0 }}</p>{% endif %}</div>
+    <div class="feld"><label for="{{ f.google.id_for_label }}">{{ f.google.label }}</label>{{ f.google }}
+      {% if f.google.errors %}<p class="fehlertext">{{ f.google.errors.0 }}</p>{% else %}<p class="klein leise">{{ f.google.help_text }}</p>{% endif %}</div>
+    <div class="feld"><label for="{{ f.website.id_for_label }}">{{ f.website.label }} <span class="leise klein">(optional)</span></label>{{ f.website }}
+      {% if f.website.errors %}<p class="fehlertext">{{ f.website.errors.0 }}</p>{% endif %}</div>
+  </div>
+  <div class="feld kurz"><label for="{{ f.weiter_um.id_for_label }}">Weiter am {{ folgetag|date:"D d.m." }} um</label>{{ f.weiter_um }}
+    {% if f.weiter_um.errors %}<p class="fehlertext">{{ f.weiter_um.errors.0 }}</p>{% endif %}</div>
+  <button class="knopf" type="submit">Etappe hier teilen</button>
+  <p class="klein leise">Die Etappe endet dann am Platz, am Folgetag geht es von dort nach {{ etappe.nach_ort }} weiter.
+    Beide Etappen werden neu berechnet, die zweite kannst du gleich wieder aufteilen.</p>
+  {% endwith %}
+</form>
+{% endif %}
+
+<p><a href="{% url 'reisen:reise' reise.pk %}">← zurück zur Reise</a></p>
+{% endblock %}

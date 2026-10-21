@@ -5,9 +5,10 @@
   const el = document.getElementById("karte");
   const daten = document.getElementById("kartendaten");
   if (!el || !daten || !window.L) return;
-  const { orte, strecken } = JSON.parse(daten.textContent);
+  const { orte, strecken, ausschnitt } = JSON.parse(daten.textContent);
 
-  const FARBEN = { zuhause: "#173F73", camping: "#E39226", zwischen: "#8A4F9E", faehre: "#1F6F8B", sonstiges: "#5F6875" };
+  const FARBEN = { zuhause: "#173F73", camping: "#E39226", zwischen: "#8A4F9E", faehre: "#1F6F8B", sonstiges: "#5F6875",
+                   halt: "#C0392B" };
   const SPEICHER = "urlaub.kartenart";
 
   const osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -37,7 +38,7 @@
   const grenzen = [];
   strecken.forEach((s) => {
     const linie = L.polyline(s.punkte, {
-      color: "#173F73", weight: 4, opacity: 0.85, dashArray: s.gerade ? "6 8" : null,
+      color: s.farbe || "#173F73", weight: s.breite || 4, opacity: 0.85, dashArray: s.gerade ? "6 8" : null,
     }).bindTooltip(s.text + (s.gerade ? " (Luftlinie – Route noch nicht berechnet)" : ""), { sticky: true });
     linie.addTo(karte);
     grenzen.push(...s.punkte);
@@ -49,12 +50,14 @@
     o.aufenthalte.forEach((a) => { popup += "<br>" + text(a); });
     if (o.website) popup += '<br><a href="' + encodeURI(o.website) + '" target="_blank" rel="noopener">Website</a>';
     L.circleMarker([o.lat, o.lon], {
-      radius: o.typ === "zuhause" ? 7 : 8, color: "#fff", weight: 2,
+      radius: o.typ === "zuhause" ? 7 : o.typ === "halt" ? 10 : 8, color: "#fff", weight: 2,
       fillColor: FARBEN[o.typ] || FARBEN.sonstiges, fillOpacity: 1,
     }).bindPopup(popup).bindTooltip(o.name).addTo(karte);
     grenzen.push([o.lat, o.lon]);
   });
 
-  if (grenzen.length) karte.fitBounds(grenzen, { padding: [24, 24], maxZoom: 12 });
+  // Etappe aufteilen: auf den Suchbereich zoomen statt auf die ganze Strecke
+  if (ausschnitt && ausschnitt.length) karte.fitBounds(ausschnitt, { padding: [40, 40], maxZoom: 11 });
+  else if (grenzen.length) karte.fitBounds(grenzen, { padding: [24, 24], maxZoom: 12 });
   else karte.setView([51.16, 10.45], 5);   // ohne Orte: Deutschland
 })();

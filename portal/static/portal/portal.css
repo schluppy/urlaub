@@ -67,7 +67,15 @@ p { max-width: 42rem; margin: 0 0 0.8rem; }
 
 .feld { margin-bottom: 1rem; }
 .feld label { display: block; font-weight: 600; margin-bottom: 0.25rem; }
-.feld input { width: 100%; max-width: 26rem; font: inherit; padding: 0.55rem 0.7rem; border: 1px solid var(--linie); border-radius: 4px; }
+.feld input, .feld select { width: 100%; max-width: 26rem; font: inherit; padding: 0.55rem 0.7rem; border: 1px solid var(--linie); border-radius: 4px; background: var(--weiss); }
+.feld .fehlertext { color: var(--rot); font-size: 0.85rem; margin: 0.25rem 0 0; }
+.feld p.klein { margin: 0.25rem 0 0; }
+/* Felder nebeneinander (Etappe aufteilen); auf dem Handy untereinander */
+.formzeile { display: flex; flex-wrap: wrap; gap: 0 1.2rem; align-items: flex-start; }
+.formzeile > .feld { flex: 1 1 14rem; }
+.formzeile > .feld.kurz { flex: 0 0 8rem; }
+.feld.kurz input { max-width: 8rem; }
+.formzeile > .feld:last-child:has(> .knopf) { flex: 0 0 auto; align-self: flex-start; padding-top: 1.7rem; }
 
 .knopf {
   display: inline-block; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer;
@@ -180,7 +188,7 @@ nav.haupt a.anmelden-link { margin-left: auto; }
 
 /* Anleitung */
 .anleitung-seite .einleitung { font-size: 1.1rem; max-width: 46rem; }
-.anleitung-seite section { max-width: 46rem; scroll-margin-top: 1rem; }
+.anleitung-seite section, .anleitung-seite .tipp[id] { max-width: 46rem; scroll-margin-top: 1rem; }
 .anleitung-seite section > h3 { font-size: 1.3rem; margin: 2rem 0 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--linie); }
 .anleitung-seite h2.teil {
   font-family: var(--schmal); font-size: 2rem; color: var(--blau); margin-top: 2.5rem;
