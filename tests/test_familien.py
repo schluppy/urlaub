@@ -82,6 +82,14 @@ class TrennungTest(TestCase):
         self.client.post(reverse("admin:reisen_reise_delete", args=[self.reise_b.pk]), {"post": "yes"})
         self.assertTrue(Reise.objects.filter(pk=self.reise_b.pk).exists())
 
+    def test_seitenfilter_nur_eigene_fahrzeugprofile(self):
+        profil_a = self.reise_a.fahrzeugprofil
+        for person in [self.anna, self.boss]:
+            with self.subTest(person=person.name):
+                inhalt = self.seite(person, reverse("admin:reisen_reise_changelist")).content.decode()
+                self.assertIn(f"fahrzeugprofil__id__exact={profil_a.pk}", inhalt)
+                self.assertNotIn(f"fahrzeugprofil__id__exact={self.profil_b.pk}", inhalt)
+
     def test_autocomplete_nur_eigene_orte(self):
         self.client.force_login(self.anna)
         antwort = self.client.get(reverse("admin:autocomplete"), {

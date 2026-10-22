@@ -7,6 +7,23 @@ Eindeutigkeitsprüfung und Speichern.
 
 NurSuperAdmin: Familien, Personen, TomTom-Schlüssel, Nutzung, Schulferien.
 """
+from django.contrib.admin import RelatedFieldListFilter
+
+
+def _hat_familie(modell):
+    return any(f.name == "familie" for f in modell._meta.get_fields()) and modell._meta.label != "konten.Person"
+
+
+class EigeneFamilieFilter(RelatedFieldListFilter):
+    """Seitenfilter auf Fahrzeugprofile, Orte … – zur Auswahl stehen nur die der eigenen Familie."""
+
+    def field_choices(self, field, request, model_admin):
+        familie = familie_von(request)
+        qs = field.related_model._default_manager.filter(familie=familie) if familie else field.related_model.objects.none()
+        ordnung = self.field_admin_ordering(field, request, model_admin)
+        if ordnung:
+            qs = qs.order_by(*ordnung)
+        return [(obj.pk, str(obj)) for obj in qs]
 
 
 def familie_von(request):
@@ -45,10 +62,20 @@ class FamilienMixin:
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         """Auswahl (Orte, Fahrzeugprofile, Reisen) nur aus der eigenen Familie – auch bei der Prüfung."""
         modell = db_field.related_model
-        if any(f.name == "familie" for f in modell._meta.get_fields()) and modell._meta.label != "konten.Person":
+        if _hat_familie(modell):
             familie = familie_von(request)
             kwargs["queryset"] = modell.objects.filter(familie=familie) if familie else modell.objects.none()
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    def get_list_filter(self, request):
+        filter_ = []
+        for eintrag in super().get_list_filter(request):
+            if isinstance(eintrag, str) and "__" not in eintrag:
+                feld = self.model._meta.get_field(eintrag)
+                if feld.is_relation and feld.related_model and _hat_familie(feld.related_model):
+                    eintrag = (eintrag, EigeneFamilieFilter)
+            filter_.append(eintrag)
+        return filter_
 
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         feld = super().formfield_for_dbfield(db_field, request, **kwargs)
