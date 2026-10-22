@@ -5,17 +5,21 @@
   „Löschen?“ in der Zeile und dann „Sichern“ – deshalb hier eindeutig beschriftet.
 {% endcomment %}
 {% block submit-row %}
+{% if is_popup %}
 {% if show_save %}<input type="submit" value="{% translate 'Save' %}" class="default" name="_save">{% endif %}
+{% else %}
+{# Zwischen Bearbeiten und Reiseseite wechseln: „Sichern“ bleibt hier, der zweite Knopf führt zum Urlaubsplaner #}
+{% if show_save_and_continue %}<input type="submit" value="Sichern" class="default" name="_continue" style="text-transform:none">{% endif %}
+{% if show_save %}<input type="submit" value="Sichern und zurück zum Urlaubsplaner" name="_planer">{% endif %}
+{% endif %}
 {% if show_save_as_new %}<input type="submit" value="{% translate 'Save as new' %}" name="_saveasnew">{% endif %}
-{% if show_save_and_add_another %}<input type="submit" value="{% translate 'Save and add another' %}" name="_addanother">{% endif %}
-{% if show_save_and_continue %}<input type="submit" value="{% if can_change %}{% translate 'Save and continue editing' %}{% else %}{% translate 'Save and view' %}{% endif %}" name="_continue">{% endif %}
 {% if show_close %}
     {% url opts|admin_urlname:'changelist' as changelist_url %}
     <a href="{% add_preserved_filters changelist_url %}" class="closelink">{% translate 'Close' %}</a>
 {% endif %}
 {% if show_delete_link and original %}
     {% url opts|admin_urlname:'delete' original.pk|admin_urlquote as delete_url %}
-    <a href="{% add_preserved_filters delete_url %}" class="deletelink" title="Löscht die Reise mit allen Etappen, Buchungen und Kosten">Ganze Reise löschen</a>
+    <a href="{% add_preserved_filters delete_url %}" class="deletelink" style="margin-left:0" title="Löscht die Reise mit allen Etappen, Buchungen und Kosten">Ganze Reise löschen</a>
 {% endif %}
 <p class="loesch-hinweis" hidden>Markierte Zeilen werden beim Sichern entfernt.</p>
 {% endblock %}

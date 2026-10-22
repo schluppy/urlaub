@@ -55,6 +55,10 @@ class AdminEingabeTest(TestCase):
         self.assertIn("reisen/eingabe.js", seite)
         self.assertIn("Ganze Reise löschen", seite)                       # roter Knopf eindeutig
         self.assertIn('class="loesch-hinweis"', seite)
+        self.assertIn('value="Sichern" class="default" name="_continue"', seite)
+        self.assertIn('value="Sichern und zurück zum Urlaubsplaner" name="_planer"', seite)
+        self.assertNotIn('name="_addanother"', seite)
+        self.assertNotIn('name="_save"', seite)
         self.assertNotIn('name="etappen-0-fahrzeugprofil"', seite)           # Spalte entfernt
         self.assertNotIn("delete-related", seite)                           # kein ✕ neben Auswahlfeldern
         self.assertIn("change-related", seite)                              # Stift bleibt
@@ -78,6 +82,20 @@ class AdminEingabeTest(TestCase):
         self.assertEqual(etappen[0].pause, timedelta(hours=1, minutes=15))
         self.assertEqual(etappen[0].fahrzeit, timedelta(hours=9, minutes=25))
         self.assertEqual(etappen[0].ankunft.strftime("%H:%M"), "16:40")
+
+    def test_sichern_bleibt_oder_fuehrt_zum_urlaubsplaner(self):
+        r = Reise.objects.create(familie=fam(), titel="Sommerreise", von=date(2027, 8, 27), bis=date(2027, 9, 20))
+        daten = leere_inlines(titel="Sommerreise", von="2027-08-27", bis="2027-09-20", urlaub_von="", urlaub_bis="",
+                              fahrzeugprofil="", verbrauch_l_100km="", dieselpreis="1.80", vignetten_meiden="",
+                              im_kalender="on", notizen="Fähre")
+        url = reverse("admin:reisen_reise_change", args=[r.pk])
+        antwort = self.client.post(url, {**daten, "_continue": "Sichern"})
+        self.assertRedirects(antwort, url, fetch_redirect_response=False)
+        antwort = self.client.post(url, {**daten, "_planer": "1"})
+        self.assertRedirects(antwort, reverse("reisen:reise", args=[r.pk]), fetch_redirect_response=False)
+        antwort = self.client.post(reverse("admin:reisen_reise_add"), {**daten, "titel": "Neu", "_planer": "1"})
+        self.assertRedirects(antwort, reverse("reisen:reise", args=[Reise.objects.get(titel="Neu").pk]),
+                             fetch_redirect_response=False)
 
     def test_gleicher_tag_nach_startzeit(self):
         r = Reise.objects.create(familie=fam(), titel="X", von=date(2027, 8, 27), bis=date(2027, 9, 20))

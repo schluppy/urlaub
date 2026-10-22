@@ -217,6 +217,17 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
                                   for o, a, b in obj.aufenthalte()] if obj and obj.pk else []
         return super().render_change_form(request, context, add, change, form_url, obj)
 
+    # „Sichern und zurück zum Urlaubsplaner“ – ohne Meldung, die Reiseseite zeigt keine an
+    def response_add(self, request, obj, post_url_continue=None):
+        if "_planer" in request.POST:
+            return redirect("reisen:reise", obj.pk)
+        return super().response_add(request, obj, post_url_continue)
+
+    def response_change(self, request, obj):
+        if "_planer" in request.POST:
+            return redirect("reisen:reise", obj.pk)
+        return super().response_change(request, obj)
+
     def get_urls(self):
         return [path("<int:pk>/route/", self.admin_site.admin_view(self.route_aktualisieren),
                      name="reisen_reise_route")] + super().get_urls()
