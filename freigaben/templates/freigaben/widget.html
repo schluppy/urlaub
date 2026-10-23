@@ -46,7 +46,8 @@ Es holt die Reisen einmal am Tag; in der App lässt sich das jederzeit von Hand 
     <button class="knopf zweit" type="submit" name="aktion" value="erzeugen">Neuen Link erzeugen</button>
     <button class="knopf gefahr" type="submit" name="aktion" value="beenden">Link beenden</button>
   </form>
-  <p class="leise klein">Ein neuer Link ersetzt den bisherigen; danach das Widget mit dem neuen Link neu einrichten.</p>
+  <p class="leise klein">Ein neuer Link ersetzt den bisherigen; danach das Widget mit dem neuen Link neu einrichten.
+    Das gilt auch für die App <a href="{% url 'freigaben:tracking' %}">Tracking</a>, die denselben Link nutzt.</p>
 </section>
 {% else %}
 <form method="post" class="flaeche">

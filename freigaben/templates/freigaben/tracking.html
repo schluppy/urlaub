@@ -1,0 +1,62 @@
+{% extends "portal/base.html" %}
+{% load static %}
+{% block titel %}Tracking{% endblock %}
+{% block kopf %}<script src="{% static 'freigaben/teilen.js' %}" defer></script>{% endblock %}
+{% block inhalt %}
+<p class="brotkrumen"><a href="{% url 'portal:start' %}">Reisen</a></p>
+<h1>Fahrten automatisch aufzeichnen</h1>
+<p>Die App „Tracking“ (Android) zeichnet die Fahrt von selbst auf: Sie startet, wenn an einem Etappentag
+das Handy mit dem Auto per Bluetooth verbunden wird, und endet, wenn das Auto in der Nähe eines Etappenziels
+getrennt wird – Campingplatz, Zwischenübernachtung oder Fährterminal. Pausen unterwegs werden zu Teilstücken,
+die du vor dem Speichern als GPX zusammenfügen kannst.</p>
+<p class="leise klein">Die App kennt das Ziel aus den Koordinaten der Orte. Liegen sie auf der Einfahrt des
+Campingplatzes, erkennt sie die Ankunft am zuverlässigsten.</p>
+
+<section class="flaeche" aria-labelledby="app">
+  <h2 id="app">1. App installieren</h2>
+  {% if apk %}
+  <p><a class="knopf" href="{% url 'freigaben:tracking_apk' %}">App herunterladen</a></p>
+  <ol>
+    <li>Auf dem <b>Handy</b> in Chrome diese Seite öffnen und <b>„App herunterladen“</b> tippen.</li>
+    <li>Die Datei <b>tracking.apk</b> öffnen und installieren – wie beim Handy-Widget. Meldet Google Play Protect
+        „App wurde zum Schutz deines Geräts blockiert“, <b>nicht auf „OK“</b>, sondern auf
+        <b>„Trotzdem installieren“</b> tippen.</li>
+  </ol>
+  {% else %}
+  <p class="leise">Die App ist auf diesem Server noch nicht hinterlegt.</p>
+  {% endif %}
+</section>
+
+{% if zugang %}
+<section class="flaeche betont" aria-labelledby="link">
+  <h2 id="link">2. App einrichten</h2>
+  <p><a class="knopf" href="{{ zugang.tracking_einrichten }}">Tracking einrichten</a></p>
+  <ol>
+    <li>Auf dem Handy tippen: Die App öffnet sich und übernimmt deinen Link.</li>
+    <li>In der App <b>„Auto wählen“</b> und das Auto aus den gekoppelten Bluetooth-Geräten aussuchen.</li>
+    <li>Die Berechtigungen der Reihe nach erteilen – beim Standort <b>„Immer zulassen“</b>, sonst kann die App
+        nicht aufzeichnen, solange sie geschlossen ist.</li>
+  </ol>
+  <p class="leise klein">Die App nutzt denselben geheimen Link wie das <a href="{% url 'freigaben:widget' %}">Handy-Widget</a>.
+    Wer ihn kennt, sieht eure Etappen der nächsten Wochen. Ein neuer Link ersetzt den bisherigen für beide Apps.
+    Erstellt {{ zugang.erstellt_am|date:"d.m.Y" }}
+    · {{ zugang.abrufe }} Abruf{{ zugang.abrufe|pluralize:"e" }}{% if zugang.zuletzt_am %}, zuletzt {{ zugang.zuletzt_am|date:"d.m. H:i" }}{% endif %}</p>
+  <input class="link-feld" type="text" readonly value="{{ zugang.tracking_link }}" aria-label="Etappen-Link" onclick="this.select()">
+  <div class="teilen-knoepfe">
+    <button type="button" class="knopf zweit" data-kopieren="{{ zugang.tracking_link }}">Link kopieren</button>
+  </div>
+  <form method="post" class="aktionen">
+    {% csrf_token %}
+    <button class="knopf zweit" type="submit" name="aktion" value="erzeugen">Neuen Link erzeugen</button>
+    <button class="knopf gefahr" type="submit" name="aktion" value="beenden">Link beenden</button>
+  </form>
+</section>
+{% else %}
+<form method="post" class="flaeche">
+  {% csrf_token %}
+  <h2>2. App einrichten</h2>
+  <p>Dafür brauchst du einen eigenen, geheimen Link. Er zeigt die Etappen der Familie {{ user.familie }}.</p>
+  <button class="knopf" type="submit" name="aktion" value="erzeugen">Link erzeugen</button>
+</form>
+{% endif %}
+{% endblock %}

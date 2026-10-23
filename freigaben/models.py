@@ -135,8 +135,8 @@ class Kalenderabo(models.Model):
 
 
 class Widgetzugang(models.Model):
-    """Geheimer Link für das Handy-Widget „Countdown bis zum nächsten Urlaub“.
-    Je Person höchstens ein aktiver Link; das Widget zeigt die Reisen ihrer Familie."""
+    """Geheimer Link für das Handy-Widget „Countdown bis zum nächsten Urlaub“ und die App „Tracking“.
+    Je Person höchstens ein aktiver Link; beide Apps zeigen die Reisen ihrer Familie."""
 
     person = models.ForeignKey("konten.Person", on_delete=models.CASCADE, related_name="widgetzugaenge")
     token = models.CharField(max_length=60, unique=True, default=abo_token, editable=False)
@@ -165,6 +165,15 @@ class Widgetzugang(models.Model):
     def einrichten(self):
         """Öffnet die App auf dem Handy und übergibt ihr den Link."""
         return "urlaubswidget://einrichten?url=" + quote(self.link, safe="")
+
+    @property
+    def tracking_link(self):
+        return settings.BASIS_URL + reverse("freigaben:tracking_daten", args=[self.token])
+
+    @property
+    def tracking_einrichten(self):
+        """Öffnet die Tracking-App und übergibt ihr den Link zu den Etappen."""
+        return "urlaubstracking://einrichten?url=" + quote(self.tracking_link, safe="")
 
     def abgerufen(self):
         Widgetzugang.objects.filter(pk=self.pk).update(abrufe=models.F("abrufe") + 1, zuletzt_am=timezone.now())

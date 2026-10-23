@@ -14,6 +14,7 @@
   <a class="knopf" href="{% url 'admin:reisen_reise_add' %}">Neue Reise</a>
   <a class="knopf zweit" href="{% url 'kalender:jahr' jahr %}">Kalender {{ jahr }}</a>
   <a class="knopf zweit" href="{% url 'kalender:pdf' jahr %}">Kalender als PDF</a>
+  <a class="knopf zweit" href="{% url 'freigaben:tracking' %}">Tracking</a>
 </div>
 
 {% if anstehend %}

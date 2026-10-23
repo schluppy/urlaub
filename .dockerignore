@@ -9,3 +9,6 @@ import
 android/.gradle
 android/app/build
 android/build
+android-tracking/.gradle
+android-tracking/app/build
+android-tracking/build

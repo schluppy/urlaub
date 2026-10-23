@@ -19,6 +19,7 @@ from reisen.views import kartendaten
 from .forms import FreigabeForm
 from .ical import kalender as ical_kalender
 from .models import MAX_TAGE, Art, Freigabe, Kalenderabo, Widgetzugang
+from .tracking import daten as tracking_daten_fuer
 from .widget import daten as widget_daten_fuer
 
 
@@ -167,9 +168,8 @@ def abo_feed(request, token):
 APK = settings.BASE_DIR / "widget" / "urlaubswidget.apk"
 
 
-@login_required
-def widget(request):
-    """App herunterladen und eigenen Widget-Link anzeigen, neu erzeugen oder beenden."""
+def _zugang_seite(request, ansicht, vorlage, apk):
+    """Eigenen Widget-Link anzeigen, neu erzeugen oder beenden – gilt für Widget und Tracking-App."""
     _familie(request)
     aktiv = request.user.widgetzugaenge.filter(beendet_am__isnull=True).first()
     if request.method == "POST":
@@ -180,25 +180,61 @@ def widget(request):
             messages.success(request, "Neuer Widget-Link erstellt." + (" Der bisherige funktioniert nicht mehr." if aktiv else ""))
         else:
             messages.success(request, "Der Widget-Link funktioniert nicht mehr.")
-        return redirect("freigaben:widget")
-    return render(request, "freigaben/widget.html", {"zugang": aktiv, "apk": APK.exists()})
+        return redirect(ansicht)
+    return render(request, vorlage, {"zugang": aktiv, "apk": apk.exists()})
 
 
-@login_required
-def widget_apk(request):
-    if not APK.exists():
+def _apk(datei, name):
+    if not datei.exists():
         raise Http404
-    return FileResponse(APK.open("rb"), as_attachment=True, filename="urlaubswidget.apk",
+    return FileResponse(datei.open("rb"), as_attachment=True, filename=name,
                         content_type="application/vnd.android.package-archive")
 
 
-def widget_daten(request, token):
-    """Die nächsten Reisen als JSON – ohne Anmeldung, nur mit gültigem, geheimem Link."""
+def _zugang_json(token, daten_fuer):
+    """JSON für die Handy-Apps – ohne Anmeldung, nur mit gültigem, geheimem Link."""
     zugang = Widgetzugang.objects.select_related("person__familie").filter(token=token).first()
     if zugang is None or not zugang.aktiv:
         raise Http404
     zugang.abgerufen()
-    antwort = JsonResponse(widget_daten_fuer(zugang.person.familie), json_dumps_params={"ensure_ascii": False})
+    antwort = JsonResponse(daten_fuer(zugang.person.familie), json_dumps_params={"ensure_ascii": False})
     antwort["X-Robots-Tag"] = "noindex, nofollow"
     antwort["Cache-Control"] = "private, no-cache"
     return antwort
+
+
+@login_required
+def widget(request):
+    """App herunterladen und eigenen Widget-Link anzeigen, neu erzeugen oder beenden."""
+    return _zugang_seite(request, "freigaben:widget", "freigaben/widget.html", APK)
+
+
+@login_required
+def widget_apk(request):
+    return _apk(APK, "urlaubswidget.apk")
+
+
+def widget_daten(request, token):
+    """Die nächsten Reisen als JSON."""
+    return _zugang_json(token, widget_daten_fuer)
+
+
+# --- Handy-App „Tracking“ (Fahrten automatisch aufzeichnen) ----------------------
+
+TRACKING_APK = settings.BASE_DIR / "widget" / "tracking.apk"
+
+
+@login_required
+def tracking(request):
+    """Tracking-App herunterladen und mit dem Widget-Link einrichten."""
+    return _zugang_seite(request, "freigaben:tracking", "freigaben/tracking.html", TRACKING_APK)
+
+
+@login_required
+def tracking_apk(request):
+    return _apk(TRACKING_APK, "tracking.apk")
+
+
+def tracking_daten(request, token):
+    """Die Etappen der nächsten Wochen als JSON."""
+    return _zugang_json(token, tracking_daten_fuer)

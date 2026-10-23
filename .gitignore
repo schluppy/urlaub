@@ -23,3 +23,8 @@ android/build/
 android/local.properties
 android/.kotlin/
 /widget/
+android-tracking/.gradle/
+android-tracking/app/build/
+android-tracking/build/
+android-tracking/local.properties
+android-tracking/.kotlin/

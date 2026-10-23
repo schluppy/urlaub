@@ -37,6 +37,10 @@ Wie der Urlaubsplaner entstanden ist und wie er im Alltag aussieht, mit Bildern,
 - **Teilen per Link** mit Ablaufdatum – eine Reise oder den Jahreskalender per WhatsApp, E-Mail
   oder Teilen-Menü des Telefons; ohne Anmeldung, nur zum Ansehen, jederzeit beendbar. Das Zuhause
   wird dabei nie gezeigt (Route beginnt erst 3 km entfernt), Kosten nur auf Wunsch.
+- **Handy-Apps** (Android, APK zum Download): Countdown-Widget bis zur nächsten Reise und **Tracking**,
+  das Fahrten von selbst aufzeichnet – Start, wenn an einem Etappentag das Auto per Bluetooth verbunden
+  wird, Ende beim Trennen nahe einem Etappenziel; Pausen lassen sich vor dem GPX-Export zusammenfügen.
+  Gebaut im Container mit `android/bauen.sh` bzw. `android-tracking/bauen.sh`.
 - **Mehrere Familien** (Mandanten) mit eigenem Bundesland und optional eigenem TomTom-Schlüssel;
   jede Familie sieht nur ihre eigenen Daten.
 - **Anmeldung ohne Passwort** über einmalig gültige Links per E-Mail.

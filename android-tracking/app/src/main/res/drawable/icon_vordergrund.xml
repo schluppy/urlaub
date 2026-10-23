@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Strecke mit Start und Ziel; der sichtbare Bereich eines adaptiven Icons sind die inneren 66 von 108 dp -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:strokeColor="#4DD0E1" android:strokeWidth="5" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M40,72 C40,58 66,62 64,48 C62,38 48,40 52,34" />
+    <path android:fillColor="#4DD0E1" android:pathData="M40,72 m-6,0 a6,6 0 1,0 12,0 a6,6 0 1,0 -12,0" />
+    <path android:fillColor="#FFC94D" android:pathData="M54,22 C47,22 43,27 43,32 C43,39 54,48 54,48 C54,48 65,39 65,32 C65,27 61,22 54,22 Z M54,28 a4,4 0 1,1 -0.01,0 Z" />
+</vector>
