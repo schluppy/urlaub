@@ -15,7 +15,7 @@ from . import aufteilen as teilung
 from . import dokumente
 from . import gpx
 from .formulare import AufteilenForm, TeilenForm
-from .models import Reise
+from .models import Reise, Track
 from .routing import TomTomFehler, kachel, profil_hinweis, reise_routen
 
 KOSTENFARBEN = {"Kraftstoff": "#2F5D8C", "Übernachtungen": "#E39226", "Fähre": "#1F6F8B",
@@ -246,6 +246,17 @@ def excel(request, pk):
     stand = dokumente.stand_jetzt()
     return _datei(dokumente.excel(r, stand), dokumente.dateiname(r, "xlsx", stand),
                   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@login_required
+def track_gpx(request, pk, track):
+    """Hochgeladenen GPX-Track unverändert herunterladen – nur aus Reisen der eigenen Familie."""
+    if request.user.familie is None:
+        raise Http404
+    t = Track.objects.filter(pk=track, reise_id=pk, reise__familie=request.user.familie).first()
+    if t is None:
+        raise Http404
+    return _datei(t.gpx, t.dateiname, "application/gpx+xml")
 
 
 @login_required

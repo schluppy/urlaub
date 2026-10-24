@@ -126,3 +126,33 @@ class RouteAusGpxTest(TestCase):
         gpx.speichern(self.reise, FAHRT.replace(b"2026-10-24", b"2026-10-26"))
         antwort = self.client.post(reverse("reisen:route", args=[self.reise.pk]), {"quelle": "gpx"}, follow=True)
         self.assertContains(antwort, "keine Etappe am 26.10.")
+
+
+class HerunterladenTest(TestCase):
+    def setUp(self):
+        self.f = fam()
+        self.reise = Reise.objects.create(familie=self.f, titel="Herbst", von=date(2026, 10, 24), bis=date(2026, 11, 1))
+        self.track, _ = gpx.speichern(self.reise, gzip.compress(FAHRT))
+        self.url = reverse("reisen:track_gpx", args=[self.reise.pk, self.track.pk])
+
+    def test_eigene_familie_bekommt_das_original(self):
+        self.client.force_login(Person.objects.create_user("anna@example.org", familie=self.f))
+        antwort = self.client.get(self.url)
+        self.assertEqual(antwort["Content-Type"], "application/gpx+xml")
+        self.assertEqual(antwort["Content-Disposition"], 'attachment; filename="Fahrt_2026-10-24_16-37.gpx"')
+        self.assertEqual(antwort.content, FAHRT)
+        a, b = Ort.objects.create(familie=self.f, name="A"), Ort.objects.create(familie=self.f, name="B")
+        Etappe.objects.create(reise=self.reise, datum=date(2026, 10, 24), von_ort=a, nach_ort=b)   # sonst kein „Route aktualisieren“
+        self.assertContains(self.client.get(reverse("reisen:reise", args=[self.reise.pk])), self.url)
+
+    def test_verwaltung_zeigt_den_link(self):
+        self.client.force_login(Person.objects.create_superuser("t@example.org", "T", familie=self.f))
+        self.assertContains(self.client.get(reverse("admin:reisen_reise_change", args=[self.reise.pk])), self.url)
+
+    def test_fremde_und_abgemeldete_nicht(self):
+        self.assertEqual(self.client.get(self.url).status_code, 302)
+        self.client.force_login(Person.objects.create_user("bob@example.org", familie=fam("Andere")))
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+        andere = Reise.objects.create(familie=self.f, titel="Andere", von=date(2026, 7, 1), bis=date(2026, 7, 2))
+        self.client.force_login(Person.objects.create_user("anna@example.org", familie=self.f))
+        self.assertEqual(self.client.get(reverse("reisen:track_gpx", args=[andere.pk, self.track.pk])).status_code, 404)

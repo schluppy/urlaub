@@ -19,7 +19,7 @@
     <summary class="knopf zweit">Route aktualisieren</summary>
     <form method="post" action="{% url 'reisen:route' reise.pk %}">{% csrf_token %}
       <button class="knopf" type="submit" name="quelle" value="gpx">Gefahrene Strecke aus GPX</button>
-      <span class="leise klein">{{ tracks|length }} Track{{ tracks|length|pluralize:"s" }}: {% for t in tracks %}{{ t.beginn|date:"d.m. H:i" }} ({{ t.entfernung_km|km }}){% if not forloop.last %}, {% endif %}{% endfor %}</span>
+      <span class="leise klein">{{ tracks|length }} Track{{ tracks|length|pluralize:"s" }}: {% for t in tracks %}<a href="{% url 'reisen:track_gpx' reise.pk t.pk %}" download title="GPX herunterladen">{{ t.beginn|date:"d.m. H:i" }}</a> ({{ t.entfernung_km|km }}){% if not forloop.last %}, {% endif %}{% endfor %}</span>
       <button class="knopf zweit" type="submit" name="quelle" value="tomtom">Geplante Strecke mit TomTom</button>
     </form>
   </details>

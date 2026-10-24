@@ -8,6 +8,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from fahrzeuge.models import Fahrzeugprofil
 from kalender.tage import ist_feiertag, urlaubstage
@@ -611,3 +612,8 @@ class Track(models.Model):
 
     def __str__(self):
         return self.name or f"Track {self.beginn:%d.%m. %H:%M}"
+
+    @property
+    def dateiname(self):
+        """Wie in der App: Fahrt_JJJJ-MM-TT_HH-MM.gpx (Ortszeit des Beginns)."""
+        return f"Fahrt_{timezone.localtime(self.beginn):%Y-%m-%d_%H-%M}.gpx"

@@ -4,7 +4,7 @@ from django import forms
 from django.contrib import admin, messages
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect
-from django.urls import path
+from django.urls import path, reverse
 from django.utils.html import format_html
 
 from kalender.tage import zeitraum_text
@@ -170,12 +170,19 @@ class LinkInline(FamilienMixin, admin.TabularInline):
 
 
 class TrackInline(FamilienMixin, admin.TabularInline):
-    """Hochgeladene GPX-Tracks (App „Tracking“) – hier nur ansehen oder löschen."""
+    """Hochgeladene GPX-Tracks (App „Tracking“) – hier ansehen, herunterladen oder löschen."""
     familien_pfad = "reise__familie"
     model = Track
     extra = 0
-    fields = ["name", "beginn", "ende", "entfernung_km", "fahrzeit", "hochgeladen_am"]
+    fields = ["name", "beginn", "ende", "entfernung_km", "fahrzeit", "hochgeladen_am", "herunterladen"]
     readonly_fields = fields
+
+    @admin.display(description="GPX")
+    def herunterladen(self, obj):
+        if not obj.pk:
+            return "–"
+        return format_html('<a href="{}" download>herunterladen</a>',
+                           reverse("reisen:track_gpx", args=[obj.reise_id, obj.pk]))
 
     def has_add_permission(self, request, *args):
         return False
