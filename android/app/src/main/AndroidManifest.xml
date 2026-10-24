@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- ab Android 14 Pflicht für Jobs, die auf Netz warten – sonst wirft schedule() eine SecurityException -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <!-- damit der geplante Abruf einen Neustart des Handys übersteht -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 

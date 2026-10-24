@@ -20,7 +20,11 @@ class WidgetProvider : AppWidgetProvider() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
-            NEU_ZEICHNEN, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> aktualisieren(context)
+            NEU_ZEICHNEN -> {
+                Speicher(context).letzterWecker = System.currentTimeMillis()
+                aktualisieren(context)
+            }
+            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> aktualisieren(context)
             else -> super.onReceive(context, intent)
         }
     }

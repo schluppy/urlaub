@@ -40,6 +40,17 @@ class Speicher(context: Context) {
         set(wert) = prefs.edit().putString("url", wert).remove("json").remove("stand").remove("fehler").apply()
 
     val stand: Long get() = prefs.getLong("stand", 0)
+
+    /** Wann der Hintergrund-Abruf bzw. der Wecker des Widgets zuletzt lief – zur Fehlersuche in der App. */
+    var letzterJob: Long
+        get() = prefs.getLong("letzter_job", 0)
+        set(wert) = prefs.edit().putLong("letzter_job", wert).apply()
+    var planFehler: String?
+        get() = prefs.getString("plan_fehler", null)
+        set(wert) = prefs.edit().putString("plan_fehler", wert).apply()
+    var letzterWecker: Long
+        get() = prefs.getLong("letzter_wecker", 0)
+        set(wert) = prefs.edit().putLong("letzter_wecker", wert).apply()
     val fehler: String? get() = prefs.getString("fehler", null)
 
     fun reisen(): List<Reise> {

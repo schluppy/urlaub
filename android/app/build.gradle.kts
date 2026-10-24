@@ -12,8 +12,8 @@ android {
         applicationId = "de.urlaubsplaner.widget"
         minSdk = 29
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     // Signiert wird mit einem festen Schlüssel außerhalb des Repositorys (siehe bauen.sh),

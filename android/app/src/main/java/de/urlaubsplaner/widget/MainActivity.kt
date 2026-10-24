@@ -1,6 +1,8 @@
 package de.urlaubsplaner.widget
 
 import android.app.Activity
+import android.app.ActivityManager
+import android.app.usage.UsageStatsManager
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Intent
@@ -51,6 +53,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (speicher.url != null) AbrufDienst.planen(this)
         anzeigen()
     }
 
@@ -87,6 +90,32 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    /** Was Android im Hintergrund zulässt und wann Abruf und Wecker zuletzt liefen. */
+    private fun hintergrund(): String {
+        fun wann(zeit: Long) = if (zeit == 0L) "noch nie"
+            else DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(zeit))
+        val gruppe = when (getSystemService(UsageStatsManager::class.java).appStandbyBucket) {
+            UsageStatsManager.STANDBY_BUCKET_ACTIVE -> "aktiv"
+            UsageStatsManager.STANDBY_BUCKET_WORKING_SET -> "regelmäßig"
+            UsageStatsManager.STANDBY_BUCKET_FREQUENT -> "häufig"
+            UsageStatsManager.STANDBY_BUCKET_RARE -> "selten"
+            UsageStatsManager.STANDBY_BUCKET_RESTRICTED -> "eingeschränkt"
+            else -> "unbekannt"
+        }
+        val zeilen = mutableListOf(
+            "Hintergrund-Abruf: " + (if (AbrufDienst.geplant(this)) "geplant" else "NICHT geplant") +
+                ", zuletzt gestartet " + wann(speicher.letzterJob),
+            "Wecker zuletzt: " + wann(speicher.letzterWecker),
+            "Android-Gruppe: $gruppe",
+        )
+        speicher.planFehler?.let { zeilen += "⚠ Einplanen fehlgeschlagen: $it" }
+        if (getSystemService(ActivityManager::class.java).isBackgroundRestricted) {
+            zeilen += "⚠ Die Akkunutzung der App ist „Eingeschränkt“. Bitte unter App-Info → Akkunutzung " +
+                "auf „Optimiert“ stellen, sonst aktualisiert sich das Widget nicht von selbst."
+        }
+        return zeilen.joinToString("\n")
+    }
+
     private fun anzeigen() {
         val anzeige = Anzeige.aus(speicher)
         findViewById<ImageView>(R.id.kreis).setImageBitmap(anzeige.bild)
@@ -101,6 +130,7 @@ class MainActivity : Activity() {
         if (speicher.stand != 0L) {
             zeilen += "\nStand: " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(speicher.stand))
         }
+        if (speicher.url != null) zeilen += "\n" + hintergrund()
         findViewById<TextView>(R.id.status).text = zeilen.joinToString("\n")
         findViewById<Button>(R.id.oeffnen).isEnabled = anzeige.reise?.link?.isNotEmpty() == true
     }
