@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect, render
+from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
 from kalender.kalender import MONATSFARBEN
@@ -12,6 +13,7 @@ from orte.models import Ortstyp
 
 from . import aufteilen as teilung
 from . import dokumente
+from . import gpx
 from .formulare import AufteilenForm, TeilenForm
 from .models import Reise
 from .routing import TomTomFehler, kachel, profil_hinweis, reise_routen
@@ -140,7 +142,7 @@ def _kontext(reise):
         x += breite
     return {
         "reise": reise, "etappen": list(reise.etappen.all()), "buchungen": list(reise.buchungen.all()),
-        "kosten": list(reise.kosten.all()), "links": list(reise.links.all()),
+        "kosten": list(reise.kosten.all()), "links": list(reise.links.all()), "tracks": list(reise.tracks.defer("gpx", "linie")),
         "posten": posten, "balken": balken, "hinweise": reise.hinweise(),
         "farbe": MONATSFARBEN[reise.urlaub_beginn.month - 1],
         "karte": kartendaten(reise),
@@ -159,6 +161,13 @@ def route(request, pk):
     r = _laden(request, pk)
     if not r.etappen.exists():
         messages.warning(request, "Diese Reise hat noch keine Etappen.")
+        return redirect("reisen:reise", pk)
+    if request.POST.get("quelle") == "gpx":
+        anzahl, ohne = gpx.reise_aus_tracks(r)
+        if anzahl:
+            messages.success(request, f"{anzahl} Etappe{'n' if anzahl != 1 else ''} aus GPX-Tracks übernommen.")
+        for track in ohne:
+            messages.warning(request, f"{track}: keine Etappe am {timezone.localtime(track.beginn):%d.%m.} – nicht übernommen.")
         return redirect("reisen:reise", pk)
     ok, fehler = reise_routen(r)
     if ok:

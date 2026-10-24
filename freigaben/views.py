@@ -6,11 +6,12 @@ from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from kalender.views import _kontext as kalender_kontext
 from kalender.views import kalender_dateiname, kalender_dokument
-from reisen import dokumente
+from reisen import dokumente, gpx
 from reisen.dokumente import stand_jetzt
 from reisen.models import Reise
 from reisen.views import _kontext as reise_kontext
@@ -20,6 +21,7 @@ from .forms import FreigabeForm
 from .ical import kalender as ical_kalender
 from .models import MAX_TAGE, Art, Freigabe, Kalenderabo, Widgetzugang
 from .tracking import daten as tracking_daten_fuer
+from .tracking import reisen as tracking_reisen_fuer
 from .widget import daten as widget_daten_fuer
 
 
@@ -191,11 +193,16 @@ def _apk(datei, name):
                         content_type="application/vnd.android.package-archive")
 
 
-def _zugang_json(token, daten_fuer):
-    """JSON für die Handy-Apps – ohne Anmeldung, nur mit gültigem, geheimem Link."""
+def _zugang(token):
     zugang = Widgetzugang.objects.select_related("person__familie").filter(token=token).first()
     if zugang is None or not zugang.aktiv:
         raise Http404
+    return zugang
+
+
+def _zugang_json(token, daten_fuer):
+    """JSON für die Handy-Apps – ohne Anmeldung, nur mit gültigem, geheimem Link."""
+    zugang = _zugang(token)
     zugang.abgerufen()
     antwort = JsonResponse(daten_fuer(zugang.person.familie), json_dumps_params={"ensure_ascii": False})
     antwort["X-Robots-Tag"] = "noindex, nofollow"
@@ -238,3 +245,28 @@ def tracking_apk(request):
 def tracking_daten(request, token):
     """Die Etappen der nächsten Wochen als JSON."""
     return _zugang_json(token, tracking_daten_fuer)
+
+
+def tracking_reisen(request, token):
+    """Die zeitlich nächsten Reisen zum Fahrtdatum (?datum=JJJJ-MM-TT) – Auswahl beim Hochladen."""
+    try:
+        datum = date.fromisoformat(request.GET.get("datum", ""))
+    except ValueError:
+        datum = date.today()
+    return _zugang_json(token, lambda familie: tracking_reisen_fuer(familie, datum))
+
+
+@csrf_exempt
+@require_POST
+def tracking_hochladen(request, token, pk):
+    """GPX einer Fahrt (gern gzip-komprimiert) einer Reise hinzufügen. Der geheime Link genügt als Ausweis."""
+    reise = get_object_or_404(Reise, pk=pk, familie=_zugang(token).person.familie)
+    try:
+        track, ersetzt = gpx.speichern(reise, request.read())
+    except gpx.GpxFehler as e:
+        return JsonResponse({"fehler": str(e)}, status=400)
+    etappe = gpx.etappe_fuer(track, list(reise.etappen.select_related("von_ort", "nach_ort")))
+    return JsonResponse({
+        "reise": reise.titel, "km": float(track.entfernung_km), "ersetzt": ersetzt,
+        "etappe": str(etappe) if etappe else None,
+    }, status=200 if ersetzt else 201, json_dumps_params={"ensure_ascii": False})

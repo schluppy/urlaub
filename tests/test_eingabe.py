@@ -30,7 +30,7 @@ class DauerFeldTest(TestCase):
 
 def leere_inlines(**ausser):
     daten = {}
-    for prefix in ["etappen", "buchungen", "kosten", "links", "erinnerungen"]:
+    for prefix in ["etappen", "buchungen", "kosten", "links", "erinnerungen", "tracks"]:
         daten.update({f"{prefix}-TOTAL_FORMS": "0", f"{prefix}-INITIAL_FORMS": "0",
                       f"{prefix}-MIN_NUM_FORMS": "0", f"{prefix}-MAX_NUM_FORMS": "1000"})
     daten.update(ausser)

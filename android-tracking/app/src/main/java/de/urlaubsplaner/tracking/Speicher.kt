@@ -4,8 +4,13 @@ import android.content.Context
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.URLEncoder
+import java.util.zip.GZIPOutputStream
 import java.time.LocalDate
 import java.time.LocalTime
+
+/** Eine Reise zur Auswahl beim Hochladen eines Tracks. */
+data class Reise(val id: Long, val titel: String, val von: LocalDate, val bis: LocalDate)
 
 /** Einstellungen und die zuletzt geholten Etappen. */
 class Speicher(context: Context) {
@@ -86,4 +91,58 @@ class Speicher(context: Context) {
         breite = if (o.isNull("breite")) null else o.getDouble("breite"),
         laenge = if (o.isNull("laenge")) null else o.getDouble("laenge"),
     )
+
+    /** Adresse neben etappen.json – derselbe geheime Link, z. B. „reisen.json“. */
+    private fun adresse(pfad: String): String {
+        val basis = url ?: throw HochladenFehler("Die App ist noch nicht eingerichtet.")
+        return basis.substringBeforeLast("/") + "/" + pfad
+    }
+
+    /** Die zeitlich nächsten Reisen zum Datum der Fahrt, die nächste zuerst. Nicht im UI-Thread. */
+    fun reisen(datum: LocalDate): List<Reise> {
+        val json = anfrage(adresse("reisen.json?datum=" + URLEncoder.encode(datum.toString(), "UTF-8")), null)
+        val liste = JSONObject(json).getJSONArray("reisen")
+        return (0 until liste.length()).map { i ->
+            val r = liste.getJSONObject(i)
+            Reise(r.getLong("id"), r.getString("titel"), LocalDate.parse(r.getString("von")), LocalDate.parse(r.getString("bis")))
+        }
+    }
+
+    /** GPX gzip-komprimiert zur Reise hochladen. Gibt die Antwort des Urlaubsplaners zurück. Nicht im UI-Thread. */
+    fun hochladen(reise: Long, gpx: String): JSONObject =
+        JSONObject(anfrage(adresse("reise/$reise/track"), gpx.toByteArray()))
+
+    private fun anfrage(adresse: String, gpx: ByteArray?): String {
+        val verbindung = try { URL(adresse).openConnection() as HttpURLConnection }
+        catch (e: Exception) { throw HochladenFehler("Keine Verbindung zum Urlaubsplaner.") }
+        try {
+            verbindung.connectTimeout = 15000
+            verbindung.readTimeout = 60000
+            verbindung.setRequestProperty("Accept", "application/json")
+            if (gpx != null) {
+                verbindung.requestMethod = "POST"
+                verbindung.doOutput = true
+                verbindung.setRequestProperty("Content-Type", "application/gzip")
+                GZIPOutputStream(verbindung.outputStream).use { it.write(gpx) }
+            }
+            val code = verbindung.responseCode
+            val text = (if (code < 400) verbindung.inputStream else verbindung.errorStream)
+                ?.bufferedReader()?.use { it.readText() } ?: ""
+            return when (code) {
+                200, 201 -> text
+                400 -> throw HochladenFehler(try { JSONObject(text).getString("fehler") } catch (e: Exception) { "Die Datei wurde abgelehnt." })
+                404 -> throw HochladenFehler("Der Link oder die Reise gilt nicht (mehr).")
+                else -> throw HochladenFehler("Der Urlaubsplaner antwortet mit Fehler $code.")
+            }
+        } catch (e: HochladenFehler) {
+            throw e
+        } catch (e: Exception) {
+            throw HochladenFehler("Keine Verbindung zum Urlaubsplaner.")
+        } finally {
+            verbindung.disconnect()
+        }
+    }
 }
+
+/** Fehler beim Hochladen mit verständlicher Meldung. */
+class HochladenFehler(meldung: String) : Exception(meldung)

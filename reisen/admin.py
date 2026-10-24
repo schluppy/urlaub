@@ -13,7 +13,7 @@ from orte.models import Ort
 from portal.templatetags.urlaub import dauer, euro, km
 
 from .formulare import PickerMixin, PreisFeld
-from .models import Buchung, Erinnerung, Etappe, Kostenposition, Link, Reise
+from .models import Buchung, Erinnerung, Etappe, Kostenposition, Link, Reise, Track
 from .routing import profil_hinweis, reise_routen
 
 
@@ -169,6 +169,21 @@ class LinkInline(FamilienMixin, admin.TabularInline):
     extra = 0
 
 
+class TrackInline(FamilienMixin, admin.TabularInline):
+    """Hochgeladene GPX-Tracks (App „Tracking“) – hier nur ansehen oder löschen."""
+    familien_pfad = "reise__familie"
+    model = Track
+    extra = 0
+    fields = ["name", "beginn", "ende", "entfernung_km", "fahrzeit", "hochgeladen_am"]
+    readonly_fields = fields
+
+    def has_add_permission(self, request, *args):
+        return False
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).defer("gpx", "linie")
+
+
 class ErinnerungInline(FamilienMixin, PickerMixin, admin.TabularInline):
     model = Erinnerung
     extra = 0
@@ -194,7 +209,7 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
     search_fields = ["titel", "notizen"]
     date_hierarchy = "von"
     save_on_top = True
-    inlines = [EtappeInline, BuchungInline, KostenInline, LinkInline, ErinnerungInline]
+    inlines = [EtappeInline, BuchungInline, KostenInline, LinkInline, ErinnerungInline, TrackInline]
     fieldsets = [
         (None, {"fields": ["titel", "im_kalender"]}),
         ("Urlaub", {"fields": [("urlaub_von", "urlaub_bis")],

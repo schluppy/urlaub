@@ -102,7 +102,7 @@ class TrennungTest(TestCase):
         daten_post = {"titel": "Neu", "von": "2027-09-01", "bis": "2027-09-03", "urlaub_von": "", "urlaub_bis": "",
                       "fahrzeugprofil": self.profil_b.pk, "verbrauch_l_100km": "", "dieselpreis": "1.80",
                       "vignetten_meiden": "", "im_kalender": "on", "notizen": ""}
-        for prefix in ["etappen", "buchungen", "kosten", "links", "erinnerungen"]:
+        for prefix in ["etappen", "buchungen", "kosten", "links", "erinnerungen", "tracks"]:
             daten_post.update({f"{prefix}-TOTAL_FORMS": "0", f"{prefix}-INITIAL_FORMS": "0",
                                f"{prefix}-MIN_NUM_FORMS": "0", f"{prefix}-MAX_NUM_FORMS": "1000"})
         daten_post.update({"etappen-TOTAL_FORMS": "1", "etappen-0-datum": "2027-09-01",

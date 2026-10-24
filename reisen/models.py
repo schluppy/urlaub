@@ -588,3 +588,26 @@ class Versandprotokoll(models.Model):
     class Meta:
         verbose_name = "Versandprotokoll"
         verbose_name_plural = "Versandprotokoll"
+
+
+class Track(models.Model):
+    """Tatsächlich gefahrene Strecke als GPX – meist aus der App „Tracking“. „Route aktualisieren“
+    kann damit Entfernung, Fahrzeit und Linie der passenden Etappe ersetzen."""
+
+    reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="tracks")
+    name = models.CharField("Name", max_length=120, blank=True)
+    beginn = models.DateTimeField("Beginn")
+    ende = models.DateTimeField("Ende")
+    entfernung_km = models.DecimalField("Entfernung (km)", max_digits=7, decimal_places=1)
+    fahrzeit = models.DurationField("Fahrzeit", help_text="ohne Pausen zwischen den Teilstücken")
+    linie = models.JSONField(default=list, editable=False)   # vereinfacht [[lat, lon], …] wie bei TomTom
+    gpx = models.TextField(editable=False)
+    hochgeladen_am = models.DateTimeField("hochgeladen am", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "GPX-Track"
+        verbose_name_plural = "GPX-Tracks"
+        ordering = ["reise", "beginn"]
+
+    def __str__(self):
+        return self.name or f"Track {self.beginn:%d.%m. %H:%M}"

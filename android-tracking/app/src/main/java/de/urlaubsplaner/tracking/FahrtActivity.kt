@@ -21,8 +21,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Eine Fahrt prüfen: Teilstücke behalten oder verwerfen, Pausen überbrücken („verbinden“)
- * und als GPX in „Download/Tracking“ speichern. Jede zusammenhängende Gruppe wird eine Datei.
+ * Eine Fahrt prüfen: Teilstücke behalten oder verwerfen, Pausen überbrücken („verbinden“),
+ * als GPX in „Download/Tracking“ speichern und zu einer Reise in den Urlaubsplaner hochladen.
+ * Jede zusammenhängende Gruppe wird eine Datei bzw. ein Track.
  */
 class FahrtActivity : Activity() {
     private var fahrtId = 0L
@@ -103,6 +104,10 @@ class FahrtActivity : Activity() {
             setOnClickListener { speichern(fahrt) }
         })
         inhalt.addView(Button(this).apply {
+            text = "In den Urlaubsplaner hochladen"
+            setOnClickListener { hochladen(fahrt) }
+        })
+        inhalt.addView(Button(this).apply {
             text = "Fahrt löschen"
             setOnClickListener {
                 AlertDialog.Builder(this@FahrtActivity)
@@ -113,7 +118,8 @@ class FahrtActivity : Activity() {
             }
         })
         inhalt.addView(TextView(this).apply {
-            text = "Verbundene Teilstücke landen in einer GPX-Datei (je Teilstück ein Segment), getrennte in eigenen Dateien."
+            text = "Verbundene Teilstücke landen in einer GPX-Datei (je Teilstück ein Segment), getrennte in eigenen Dateien. " +
+                "Hochgeladen wird genauso – im Urlaubsplaner ersetzt „Route aktualisieren“ damit die geplante Strecke."
             alpha = 0.7f
             textSize = 13f
             gravity = Gravity.START
@@ -121,14 +127,23 @@ class FahrtActivity : Activity() {
         })
     }
 
-    private fun speichern(fahrt: Fahrt) {
+    /** Die gewählten Teilstücke als Gruppen; null (mit Hinweis), wenn keines gewählt ist. */
+    private fun gruppen(): List<List<Teil>>? {
         val gruppen = Regeln.gruppieren(teile, verbinden.map { it.isChecked }, behalten.map { it.isChecked })
         if (gruppen.isEmpty()) {
             Toast.makeText(this, "Kein Teilstück ausgewählt.", Toast.LENGTH_LONG).show()
-            return
+            return null
         }
+        return gruppen
+    }
+
+    private fun titel(fahrt: Fahrt, gruppen: List<List<Teil>>, gruppe: List<Teil>) =
+        "Fahrt ${MainActivity.zeit(gruppe.first().beginn)}" + (fahrt.ziel?.takeIf { gruppe === gruppen.last() }?.let { " → $it" } ?: "")
+
+    private fun speichern(fahrt: Fahrt) {
+        val gruppen = gruppen() ?: return
         val dateien = gruppen.map { gruppe ->
-            val titel = "Fahrt ${MainActivity.zeit(gruppe.first().beginn)}" + (fahrt.ziel?.takeIf { gruppe === gruppen.last() }?.let { " → $it" } ?: "")
+            val titel = titel(fahrt, gruppen, gruppe)
             val werte = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, Gpx.name(gruppe))
                 put(MediaStore.Downloads.MIME_TYPE, "application/gpx+xml")
@@ -141,9 +156,65 @@ class FahrtActivity : Activity() {
         Datenbank.von(this).setzen(fahrtId, Zustand.GESPEICHERT)
         AlertDialog.Builder(this)
             .setMessage("${dateien.size} GPX-Datei${if (dateien.size == 1) "" else "en"} in „Download/Tracking“ gespeichert.")
-            .setPositiveButton("Teilen") { _, _ -> teilen(dateien) }
+            .setPositiveButton("Hochladen") { _, _ -> hochladen(fahrt); laden() }
+            .setNeutralButton("Teilen") { _, _ -> teilen(dateien) }
             .setNegativeButton("Fertig") { _, _ -> laden() }
             .show()
+    }
+
+    /** Erst die Reisen holen (die zeitlich nächste zuerst), dann wählen lassen und hochladen. */
+    private fun hochladen(fahrt: Fahrt) {
+        val gruppen = gruppen() ?: return
+        val speicher = Speicher(this)
+        val datum = Instant.ofEpochMilli(gruppen.first().first().beginn).atZone(ZoneId.systemDefault()).toLocalDate()
+        Toast.makeText(this, "Lade die Reisen …", Toast.LENGTH_SHORT).show()
+        Thread {
+            try {
+                val reisen = speicher.reisen(datum)
+                runOnUiThread { reiseWaehlen(fahrt, gruppen, reisen) }
+            } catch (e: HochladenFehler) {
+                runOnUiThread { meldung(e.message) }
+            }
+        }.start()
+    }
+
+    private fun reiseWaehlen(fahrt: Fahrt, gruppen: List<List<Teil>>, reisen: List<Reise>) {
+        if (reisen.isEmpty()) {
+            meldung("Im Urlaubsplaner gibt es keine Reise.")
+            return
+        }
+        var gewaehlt = 0
+        AlertDialog.Builder(this)
+            .setTitle("Zu welcher Reise?")
+            .setSingleChoiceItems(reisen.map { "${it.titel} · ${tag.format(it.von)}–${tag.format(it.bis)}" }.toTypedArray(), 0) { _, i -> gewaehlt = i }
+            .setPositiveButton("Hochladen") { _, _ -> senden(fahrt, gruppen, reisen[gewaehlt]) }
+            .setNegativeButton("Abbrechen", null)
+            .show()
+    }
+
+    private fun senden(fahrt: Fahrt, gruppen: List<List<Teil>>, reise: Reise) {
+        Toast.makeText(this, "Lade hoch …", Toast.LENGTH_SHORT).show()
+        val speicher = Speicher(this)
+        Thread {
+            val text = try {
+                val zeilen = gruppen.map { gruppe ->
+                    val antwort = speicher.hochladen(reise.id, Gpx.schreiben(titel(fahrt, gruppen, gruppe), gruppe))
+                    String.format("%.1f km", antwort.getDouble("km")) +
+                        (if (antwort.optBoolean("ersetzt")) " (ersetzt)" else "") + " → " +
+                        (if (antwort.isNull("etappe")) "keine Etappe an diesem Tag" else "Etappe ${antwort.getString("etappe")}")
+                }
+                "Zu „${reise.titel}“ hochgeladen:\n" + zeilen.joinToString("\n") +
+                    "\n\nIm Urlaubsplaner unter „Route aktualisieren“ → „Gefahrene Strecke aus GPX“ übernehmen."
+            } catch (e: HochladenFehler) {
+                e.message
+            }
+            runOnUiThread { meldung(text) }
+        }.start()
+    }
+
+    private fun meldung(text: String?) {
+        if (isFinishing) return
+        AlertDialog.Builder(this).setMessage(text).setPositiveButton("OK", null).show()
     }
 
     private fun teilen(dateien: List<Uri>) {
@@ -164,5 +235,6 @@ class FahrtActivity : Activity() {
     companion object {
         const val FAHRT = "fahrt"
         private val uhrzeit = DateTimeFormatter.ofPattern("HH:mm")
+        private val tag = DateTimeFormatter.ofPattern("dd.MM.")
     }
 }

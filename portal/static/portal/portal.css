@@ -110,6 +110,13 @@ table.uebersicht { border-collapse: collapse; width: 100%; min-width: 46rem; }
 .reisekopf h1 { margin-bottom: 0.2rem; }
 .zeitraum-gross { margin: 0; }
 .aktionen form { margin: 0; }
+/* Knopf mit Auswahl darunter (Route aktualisieren: GPX oder TomTom) */
+details.auswahl > summary { list-style: none; }
+details.auswahl > summary::-webkit-details-marker { display: none; }
+details.auswahl > summary::after { content: " ▾"; }
+details.auswahl[open] > summary::after { content: " ▴"; }
+details.auswahl form { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; margin-top: 0.4rem;
+  background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 0.6rem 0.8rem; }
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.6rem; margin: 0 0 1rem; }
 .kennzahlen div { background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 0.5rem 0.8rem; }
 .kennzahlen dt { font-size: 0.8rem; color: var(--grau); }

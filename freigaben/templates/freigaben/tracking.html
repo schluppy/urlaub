@@ -8,7 +8,8 @@
 <p>Die App „Tracking“ (Android) zeichnet die Fahrt von selbst auf: Sie startet, wenn an einem Etappentag
 das Handy mit dem Auto per Bluetooth verbunden wird, und endet, wenn das Auto in der Nähe eines Etappenziels
 getrennt wird – Campingplatz, Zwischenübernachtung oder Fährterminal. Pausen unterwegs werden zu Teilstücken,
-die du vor dem Speichern als GPX zusammenfügen kannst.</p>
+die du vor dem Speichern als GPX zusammenfügen kannst. Die fertige Fahrt lädt die App auf Wunsch direkt zu einer
+Reise hoch; dort übernimmt „Route aktualisieren“ die gefahrene Strecke.</p>
 <p class="leise klein">Die App kennt das Ziel aus den Koordinaten der Orte. Liegen sie auf der Einfahrt des
 Campingplatzes, erkennt sie die Ankunft am zuverlässigsten.</p>
 
@@ -38,7 +39,7 @@ Campingplatzes, erkennt sie die Ankunft am zuverlässigsten.</p>
         nicht aufzeichnen, solange sie geschlossen ist.</li>
   </ol>
   <p class="leise klein">Die App nutzt denselben geheimen Link wie das <a href="{% url 'freigaben:widget' %}">Handy-Widget</a>.
-    Wer ihn kennt, sieht eure Etappen der nächsten Wochen. Ein neuer Link ersetzt den bisherigen für beide Apps.
+    Wer ihn kennt, sieht eure Etappen der nächsten Wochen und kann Fahrten zu euren Reisen hochladen. Ein neuer Link ersetzt den bisherigen für beide Apps.
     Erstellt {{ zugang.erstellt_am|date:"d.m.Y" }}
     · {{ zugang.abrufe }} Abruf{{ zugang.abrufe|pluralize:"e" }}{% if zugang.zuletzt_am %}, zuletzt {{ zugang.zuletzt_am|date:"d.m. H:i" }}{% endif %}</p>
   <input class="link-feld" type="text" readonly value="{{ zugang.tracking_link }}" aria-label="Etappen-Link" onclick="this.select()">

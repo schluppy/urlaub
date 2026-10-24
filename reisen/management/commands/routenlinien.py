@@ -21,6 +21,8 @@ class Command(BaseCommand):
         for e in Etappe.objects.select_related("reise__fahrzeugprofil", "fahrzeugprofil", "von_ort", "nach_ort"):
             if not alle and (e.routing_details or {}).get("linie"):
                 continue
+            if (e.routing_details or {}).get("gpx"):
+                continue   # gefahrene Strecke aus GPX nicht durch die geplante ersetzen
             try:
                 n = len(etappe_linie_holen(e))
                 ok += 1
