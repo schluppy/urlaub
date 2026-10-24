@@ -40,7 +40,11 @@ Wie der Urlaubsplaner entstanden ist und wie er im Alltag aussieht, mit Bildern,
 - **Handy-Apps** (Android, APK zum Download): Countdown-Widget bis zur nächsten Reise und **Tracking**,
   das Fahrten von selbst aufzeichnet – Start, wenn an einem Etappentag das Auto per Bluetooth verbunden
   wird, Ende beim Trennen nahe einem Etappenziel; Pausen lassen sich vor dem GPX-Export zusammenfügen.
-  Gebaut im Container mit `android/bauen.sh` bzw. `android-tracking/bauen.sh`.
+  Die fertige Fahrt lädt die App direkt zu einer Reise hoch; „Route aktualisieren“ übernimmt dann die
+  gefahrene Strecke statt der geplanten.
+  Gebaut im Container mit `android/bauen.sh` bzw. `android-tracking/bauen.sh`. Der Bau braucht gut
+  1,5 GB Arbeitsspeicher – auf einem knappen Server besser auf einem anderen Rechner bauen und nur die
+  APK nach `widget/` kopieren (mit demselben Signierschlüssel).
 - **Mehrere Familien** (Mandanten) mit eigenem Bundesland und optional eigenem TomTom-Schlüssel;
   jede Familie sieht nur ihre eigenen Daten.
 - **Anmeldung ohne Passwort** über einmalig gültige Links per E-Mail.

@@ -2,6 +2,7 @@
 # Baut die App „Tracking“ im Container, lässt die Unit-Tests laufen und legt die APK unter
 # widget/tracking.apk ab. Bauumgebung und Signierschlüssel teilt sie mit dem Handy-Widget
 # (../android/Dockerfile, ~/.urlaubswidget) – den Schlüssel legt ../android/bauen.sh an.
+# Braucht gut 1,5 GB Arbeitsspeicher: auf einem knappen Server lieber woanders bauen und nur die APK kopieren.
 set -e
 cd "$(dirname "$0")"
 SCHLUESSEL="$HOME/.urlaubswidget"

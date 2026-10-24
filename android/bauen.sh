@@ -2,6 +2,7 @@
 # Baut das Handy-Widget im Container und legt die APK unter widget/urlaubswidget.apk ab.
 # Der Signierschlüssel liegt außerhalb des Repositorys in ~/.urlaubswidget – unbedingt sichern:
 # Ohne ihn lassen sich Updates nicht über die installierte App spielen.
+# Braucht gut 1,5 GB Arbeitsspeicher: auf einem knappen Server lieber woanders bauen und nur die APK kopieren.
 set -e
 cd "$(dirname "$0")"
 SCHLUESSEL="$HOME/.urlaubswidget"
