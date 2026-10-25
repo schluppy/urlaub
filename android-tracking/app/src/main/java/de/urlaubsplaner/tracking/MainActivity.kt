@@ -6,11 +6,10 @@ import android.app.Activity
 import android.app.AlertDialog
 import android.bluetooth.BluetoothManager
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.os.PowerManager
 import android.provider.Settings
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
@@ -28,6 +27,7 @@ import java.util.Locale
 /** Einrichten, Stand ansehen, von Hand starten und beenden, Fahrten öffnen. */
 class MainActivity : Activity() {
     private lateinit var speicher: Speicher
+    private var detailsOffen = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,8 +39,13 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.beenden).setOnClickListener {
             imHintergrund { Datenbank.von(this).offeneFahrt()?.let { Steuerung.beenden(this, it.id, null) } }
         }
-        findViewById<Button>(R.id.test_verbunden).setOnClickListener { imHintergrund { Steuerung.verbunden(this) } }
-        findViewById<Button>(R.id.test_getrennt).setOnClickListener { imHintergrund { Steuerung.getrennt(this) } }
+        findViewById<Button>(R.id.update_laden).setOnClickListener {
+            speicher.update()?.let { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.download))) }
+        }
+        findViewById<Button>(R.id.details_knopf).setOnClickListener {
+            detailsOffen = !detailsOffen
+            anzeigen()
+        }
         findViewById<Switch>(R.id.automatik).setOnCheckedChangeListener { _, an -> speicher.automatik = an }
         findViewById<Button>(R.id.berechtigungen).setOnClickListener { berechtigungen() }
         findViewById<Button>(R.id.auto).setOnClickListener { autoWaehlen() }
@@ -59,6 +64,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        if (speicher.url != null) AbrufDienst.planen(this)
         anzeigen()
     }
 
@@ -104,9 +110,7 @@ class MainActivity : Activity() {
 
     // --- Berechtigungen: der Reihe nach, denn „Standort immer“ fragt Android erst nach „beim Verwenden“ ---
 
-    private fun hat(recht: String) = checkSelfPermission(recht) == PackageManager.PERMISSION_GRANTED
-
-    private fun akkuFrei() = getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(packageName)
+    private fun hat(recht: String) = Rechte.hat(this, recht)
 
     @SuppressLint("BatteryLife")   // die App muss im Hintergrund starten dürfen, das ist ihr Zweck
     private fun berechtigungen() {
@@ -118,8 +122,12 @@ class MainActivity : Activity() {
                 Toast.makeText(this, "Bitte „Immer zulassen“ wählen.", Toast.LENGTH_LONG).show()
                 requestPermissions(arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION), 2)
             }
-            !akkuFrei() -> startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+            !Rechte.akkuFrei(this) -> startActivity(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
                 Uri.parse("package:$packageName")))
+            !Rechte.bleiben(this) -> {
+                Toast.makeText(this, "Bitte „App-Aktivität pausieren, wenn nicht verwendet“ ausschalten.", Toast.LENGTH_LONG).show()
+                startActivity(Intent(Intent.ACTION_AUTO_REVOKE_PERMISSIONS, Uri.parse("package:$packageName")))
+            }
             else -> Toast.makeText(this, "Alles erteilt.", Toast.LENGTH_SHORT).show()
         }
     }
@@ -173,18 +181,30 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.beenden).isEnabled = offen != null
         findViewById<Switch>(R.id.automatik).isChecked = speicher.automatik
 
+        val update = speicher.update()
+        findViewById<View>(R.id.update).visibility = if (update != null) View.VISIBLE else View.GONE
+        if (update != null) {
+            findViewById<TextView>(R.id.update_text).text =
+                "Neue Version ${update.version} verfügbar (installiert: ${speicher.version})"
+        }
+
+        // Kurz immer sichtbar, was fehlt; die ganze Liste hinter „Details“.
         val haken = { ok: Boolean -> if (ok) "✓" else "✗" }
-        val einrichtung = mutableListOf(
+        val rechte = Rechte.alle(this)
+        val fehlt = listOfNotNull(if (speicher.url == null) "Etappen-Link" else null,
+            if (speicher.autoAdresse == null) "Auto gewählt" else null) + rechte.filterNot { it.erteilt }.map { it.name }
+        val kurz = mutableListOf(if (fehlt.isEmpty()) "✓ Alles eingerichtet" else "✗ Es fehlt: " + fehlt.joinToString(", "))
+        speicher.fehler?.let { kurz += "⚠ $it" }
+        findViewById<TextView>(R.id.einrichtung_kurz).text = kurz.joinToString("\n")
+
+        val einrichtung = listOf(
             "${haken(speicher.url != null)} Etappen-Link" + (if (speicher.stand != 0L)
                 " (Stand " + DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(speicher.stand)) + ")" else ""),
             "${haken(speicher.autoAdresse != null)} Auto: ${speicher.autoName ?: "noch nicht gewählt"}",
-            "${haken(hat(Manifest.permission.ACCESS_FINE_LOCATION) && hat(Manifest.permission.ACCESS_BACKGROUND_LOCATION))} Standort „immer“",
-            "${haken(hat(Manifest.permission.BLUETOOTH_CONNECT))} Geräte in der Nähe (Bluetooth)",
-            "${haken(hat(Manifest.permission.POST_NOTIFICATIONS))} Benachrichtigungen",
-            "${haken(akkuFrei())} Akku-Optimierung aus",
-        )
-        speicher.fehler?.let { einrichtung += "⚠ $it" }
+        ) + rechte.map { "${haken(it.erteilt)} ${it.name}" } + "App-Version: ${speicher.version}"
         findViewById<TextView>(R.id.einrichtung).text = einrichtung.joinToString("\n")
+        findViewById<View>(R.id.details).visibility = if (detailsOffen) View.VISIBLE else View.GONE
+        findViewById<Button>(R.id.details_knopf).text = if (detailsOffen) "Details ausblenden" else "Details anzeigen"
 
         val liste = findViewById<LinearLayout>(R.id.fahrten)
         liste.removeAllViews()

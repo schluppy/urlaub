@@ -59,6 +59,10 @@ object Regeln {
     fun heutigeZiele(heute: LocalDate, etappen: List<Etappe>): List<Ort> =
         etappen.filter { it.datum == heute }.map { it.nach }
 
+    /** Am Tag vor einer Etappe und am Etappentag selbst prüft die App, ob ihr noch alle Rechte bleiben. */
+    fun rechtePruefen(heute: LocalDate, etappen: List<Etappe>): Etappe? =
+        etappen.filter { it.datum == heute || it.datum == heute.plusDays(1) }.minByOrNull { it.datum }
+
     /** Die nächste Etappe ab heute. */
     fun naechste(heute: LocalDate, etappen: List<Etappe>): Etappe? =
         etappen.filter { !it.datum.isBefore(heute) }.minByOrNull { it.datum }

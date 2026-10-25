@@ -222,14 +222,19 @@ def widget_apk(request):
     return _apk(APK, "urlaubswidget.apk")
 
 
-def widget_daten(request, token):
-    """Die nächsten Reisen als JSON, dazu die Version der App auf dem Server für den Update-Hinweis."""
-    def daten_fuer(familie):
-        app = apk.version(APK)
+def _mit_app(daten_fuer, datei, download, token):
+    """Ergänzt das JSON um die Version der App auf dem Server – für den Update-Hinweis in der App."""
+    def mit_app(familie):
+        app = apk.version(datei)
         if app:
-            app["download"] = settings.BASIS_URL + reverse("freigaben:widget_apk_link", args=[token])
-        return {**widget_daten_fuer(familie), "app": app}
-    return _zugang_json(token, daten_fuer)
+            app["download"] = settings.BASIS_URL + reverse(download, args=[token])
+        return {**daten_fuer(familie), "app": app}
+    return mit_app
+
+
+def widget_daten(request, token):
+    """Die nächsten Reisen als JSON, dazu die Version der App auf dem Server."""
+    return _zugang_json(token, _mit_app(widget_daten_fuer, APK, "freigaben:widget_apk_link", token))
 
 
 def widget_apk_link(request, token):
@@ -254,9 +259,15 @@ def tracking_apk(request):
     return _apk(TRACKING_APK, "tracking.apk")
 
 
+def tracking_apk_link(request, token):
+    """Die Tracking-App ohne Anmeldung, nur mit gültigem Widget-Link – für den Update-Knopf in der App."""
+    _zugang(token)
+    return _apk(TRACKING_APK, "tracking.apk")
+
+
 def tracking_daten(request, token):
-    """Die Etappen der nächsten Wochen als JSON."""
-    return _zugang_json(token, tracking_daten_fuer)
+    """Die Etappen der nächsten Wochen als JSON, dazu die Version der App auf dem Server."""
+    return _zugang_json(token, _mit_app(tracking_daten_fuer, TRACKING_APK, "freigaben:tracking_apk_link", token))
 
 
 def tracking_reisen(request, token):

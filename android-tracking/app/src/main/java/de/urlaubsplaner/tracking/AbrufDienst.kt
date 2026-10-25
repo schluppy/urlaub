@@ -6,19 +6,28 @@ import android.app.job.JobScheduler
 import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 /**
  * Holt die Etappen im Hintergrund. Android startet den Job erst, wenn Netz da ist – auch im
  * Ruhemodus (Doze).
  * Schlägt der Abruf fehl, versucht Android es nach einer Wartezeit erneut.
+ * Am Tag vor einer Etappe prüft er außerdem, ob der App noch alle Rechte bleiben.
  */
 class AbrufDienst : JobService() {
 
     override fun onStartJob(params: JobParameters): Boolean {
         val speicher = Speicher(this)
-        if (speicher.url == null || System.currentTimeMillis() - speicher.stand < VERALTET) return false
+        if (speicher.url == null) return false
+        if (System.currentTimeMillis() - speicher.stand < VERALTET) {
+            rechtePruefen(this, speicher)
+            return false
+        }
         Thread {
             val erfolg = speicher.abrufen()
+            rechtePruefen(this, speicher)
             jobFinished(params, !erfolg)
         }.start()
         return true
@@ -43,6 +52,21 @@ class AbrufDienst : JobService() {
                     .setPersisted(true)   // übersteht einen Neustart des Handys
                     .build()
             )
+        }
+
+        private val tag = DateTimeFormatter.ofPattern("EE dd.MM.", Locale.GERMAN)
+
+        /** Steht heute oder morgen eine Etappe an und fehlt etwas, einmal am Tag Bescheid geben. */
+        fun rechtePruefen(context: Context, speicher: Speicher) {
+            val heute = LocalDate.now()
+            val etappe = Regeln.rechtePruefen(heute, speicher.etappen()) ?: return
+            if (speicher.rechteGemeldet == heute.toString()) return
+            val fehlt = Rechte.fehlend(context) + if (speicher.autoAdresse == null) listOf("Auto gewählt") else emptyList()
+            if (fehlt.isEmpty()) return
+            val wann = if (etappe.datum == heute) "Heute" else "Morgen (${tag.format(etappe.datum)})"
+            Hinweise.rechte(context, "$wann beginnt die Etappe ${etappe.von.name} → ${etappe.nach.name}. " +
+                "Es fehlt: ${fehlt.joinToString(", ")}. Bitte die App öffnen und „Berechtigungen erteilen“ tippen.")
+            speicher.rechteGemeldet = heute.toString()
         }
 
         fun abbrechen(context: Context) = context.getSystemService(JobScheduler::class.java).cancel(JOB_ID)

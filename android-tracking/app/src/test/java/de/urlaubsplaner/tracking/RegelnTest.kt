@@ -25,6 +25,13 @@ class RegelnTest {
         assertFalse(Regeln.etappentag(tag1.minusDays(1), etappen))
     }
 
+    @Test fun rechteAmTagDavorUndAmEtappentag() {
+        assertEquals(tag1, Regeln.rechtePruefen(tag1.minusDays(1), etappen)?.datum)
+        assertEquals(tag1, Regeln.rechtePruefen(tag1, etappen)?.datum)
+        assertNull(Regeln.rechtePruefen(tag1.minusDays(2), etappen))
+        assertNull(Regeln.rechtePruefen(tag2.plusDays(1), etappen))
+    }
+
     @Test fun zielInDerNaeheUndWeitWeg() {
         assertEquals(brenner, Regeln.zielInDerNaehe(46.955, 11.445, tag1, tag1, etappen))   // ca. 700 m
         assertNull(Regeln.zielInDerNaehe(46.98, 11.44, tag1, tag1, etappen))                // ca. 3,3 km

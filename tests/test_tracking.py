@@ -1,5 +1,7 @@
+import tempfile
 from datetime import date, time
 from decimal import Decimal
+from pathlib import Path
 from unittest import mock
 
 from django.test import TestCase
@@ -11,7 +13,7 @@ from konten.models import Person
 from orte.models import Ort
 from reisen.models import Etappe, Reise
 
-from .hilfen import fam
+from .hilfen import apk_bauen, fam
 
 HEUTE = date(2027, 3, 1)
 
@@ -80,3 +82,19 @@ class ZugangTest(TestCase):
             self.assertEqual(self.client.get(reverse("freigaben:tracking_apk")).status_code, 404)
         self.client.logout()
         self.assertEqual(self.client.get(reverse("freigaben:tracking_apk")).status_code, 302)
+
+    def test_update_hinweis_und_download_ueber_den_link(self):
+        zugang = Widgetzugang.objects.create(person=self.anna)
+        self.client.logout()
+        with tempfile.TemporaryDirectory() as ordner:
+            datei = Path(ordner) / "tracking.apk"
+            with mock.patch("freigaben.views.TRACKING_APK", datei):
+                self.assertIsNone(self.client.get(reverse("freigaben:tracking_daten", args=[zugang.token])).json()["app"])
+                apk_bauen(datei, 3, "0.3")
+                app = self.client.get(reverse("freigaben:tracking_daten", args=[zugang.token])).json()["app"]
+                self.assertEqual((app["code"], app["name"]), (3, "0.3"))
+                self.assertTrue(app["download"].endswith(reverse("freigaben:tracking_apk_link", args=[zugang.token])))
+                download = self.client.get(reverse("freigaben:tracking_apk_link", args=[zugang.token]))
+                self.assertEqual(download["Content-Type"], "application/vnd.android.package-archive")
+                zugang.beenden()
+                self.assertEqual(self.client.get(reverse("freigaben:tracking_apk_link", args=[zugang.token])).status_code, 404)

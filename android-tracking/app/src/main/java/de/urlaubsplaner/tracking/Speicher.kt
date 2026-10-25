@@ -12,8 +12,11 @@ import java.time.LocalTime
 /** Eine Reise zur Auswahl beim Hochladen eines Tracks. */
 data class Reise(val id: Long, val titel: String, val von: LocalDate, val bis: LocalDate)
 
+/** Neuere Version der App auf dem Server: Anzeigename und Link zum Herunterladen. */
+data class Update(val version: String, val download: String)
+
 /** Einstellungen und die zuletzt geholten Etappen. */
-class Speicher(context: Context) {
+class Speicher(private val context: Context) {
     private val prefs = context.getSharedPreferences("tracking", Context.MODE_PRIVATE)
 
     var url: String?
@@ -35,6 +38,26 @@ class Speicher(context: Context) {
 
     val stand: Long get() = prefs.getLong("stand", 0)
     val fehler: String? get() = prefs.getString("fehler", null)
+
+    /** An welchem Tag zuletzt auf fehlende Rechte hingewiesen wurde (JJJJ-MM-TT) – höchstens einmal am Tag. */
+    var rechteGemeldet: String?
+        get() = prefs.getString("rechte_gemeldet", null)
+        set(wert) = prefs.edit().putString("rechte_gemeldet", wert).apply()
+
+    /** Die Version dieser App, z. B. „0.3“. */
+    val version: String get() = paket().versionName ?: ""
+
+    /** Meldet der Urlaubsplaner eine neuere App als die installierte? */
+    fun update(): Update? = try {
+        val app = JSONObject(prefs.getString("json", null) ?: "{}").optJSONObject("app")
+        if (app != null && app.optLong("code") > paket().longVersionCode && app.optString("download").isNotEmpty()) {
+            Update(app.optString("name"), app.getString("download"))
+        } else null
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun paket() = context.packageManager.getPackageInfo(context.packageName, 0)
 
     fun etappen(): List<Etappe> {
         val json = prefs.getString("json", null) ?: return emptyList()

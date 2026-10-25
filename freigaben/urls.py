@@ -17,6 +17,7 @@ urlpatterns = [
     path("tracking/", views.tracking, name="tracking"),
     path("tracking/tracking.apk", views.tracking_apk, name="tracking_apk"),
     path("widget/<str:token>/etappen.json", views.tracking_daten, name="tracking_daten"),
+    path("widget/<str:token>/tracking.apk", views.tracking_apk_link, name="tracking_apk_link"),
     path("widget/<str:token>/reisen.json", views.tracking_reisen, name="tracking_reisen"),
     path("widget/<str:token>/reise/<int:pk>/track", views.tracking_hochladen, name="tracking_hochladen"),
     # öffentlich, ohne Anmeldung

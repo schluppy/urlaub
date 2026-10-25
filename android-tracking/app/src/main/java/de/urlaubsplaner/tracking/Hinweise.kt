@@ -13,6 +13,7 @@ object Hinweise {
     private const val KANAL_FAHRT = "fahrt"
     const val ID_AUFZEICHNUNG = 1
     private const val ID_FAHRT = 2
+    private const val ID_RECHTE = 3
 
     fun kanaele(context: Context) {
         val manager = context.getSystemService(NotificationManager::class.java)
@@ -60,6 +61,19 @@ object Hinweise {
             .setContentIntent(oeffnen(context, MainActivity::class.java, null))
             .build()
         context.getSystemService(NotificationManager::class.java).notify(ID_FAHRT, hinweis)
+    }
+
+    /** Vor einer Etappe fehlen Rechte – mit Benachrichtigungen geht das nur, solange die erlaubt sind. */
+    fun rechte(context: Context, text: String) {
+        val hinweis = Notification.Builder(context, KANAL_FAHRT)
+            .setSmallIcon(R.drawable.icon_klein)
+            .setContentTitle("Tracking: Berechtigungen fehlen")
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setAutoCancel(true)
+            .setContentIntent(oeffnen(context, MainActivity::class.java, null))
+            .build()
+        context.getSystemService(NotificationManager::class.java).notify(ID_RECHTE, hinweis)
     }
 
     private fun oeffnen(context: Context, ziel: Class<*>, fahrt: Long?): PendingIntent {
