@@ -5,9 +5,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from freigaben.models import Freigabe
+from freigaben.models import Freigabe, Widgetzugang
 from konten.models import Familie, Person
-from reisen.models import Erinnerung
+from reisen.models import Erinnerung, Track
 
 from .test_familien import daten
 
@@ -51,6 +51,10 @@ class StatistikTest(TestCase):
         self.bert = Person.objects.create_user("bert@example.org", "Bert", familie=self.b,
                                                zuletzt_aktiv=timezone.now() - timedelta(days=3))
         self.url = reverse("admin:konten_familie_statistik")
+        Widgetzugang.objects.create(person=self.bert, abrufe=5, zuletzt_am=timezone.now())
+        Widgetzugang.objects.create(person=self.bert, abrufe=3, beendet_am=timezone.now())
+        Track.objects.create(reise=self.reise_b, beginn=timezone.now(), ende=timezone.now(),
+                             entfernung_km=123.4, fahrzeit=timedelta(hours=2), gpx="<gpx/>")
 
     def test_nur_super_admin(self):
         self.client.force_login(self.anna)
@@ -68,10 +72,14 @@ class StatistikTest(TestCase):
         self.assertEqual(b["erinnerungen_offen"], 1)
         self.assertEqual(b["aktive_personen"], 1)
         self.assertAlmostEqual(b["zuletzt_genutzt"], self.bert.zuletzt_aktiv, delta=timedelta(seconds=1))
+        self.assertEqual((b["widget_aktiv"], b["widget_abrufe"]), (1, 8))
+        self.assertEqual(b["gpx"], 1)
         self.assertNotIn("freigaben", zeilen["Muster"])
+        self.assertNotIn("gpx", zeilen["Muster"])
         # Muster wurde gerade vom Boss genutzt und steht deshalb oben
         self.assertEqual(antwort.context["zeilen"][0]["familie"].name, "Muster")
         self.assertEqual(antwort.context["summen"]["reisen"], 2)
+        self.assertEqual((antwort.context["summen"]["widget_abrufe"], antwort.context["summen"]["gpx"]), (8, 1))
 
     def test_keine_inhalte_fremder_familien(self):
         self.client.force_login(self.boss)

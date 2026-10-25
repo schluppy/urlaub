@@ -27,6 +27,8 @@
     <div class="kachel"><b>{{ gesamt.familien }}</b><span>Familien, {{ summen.aktive_personen }} aktive Personen</span></div>
     <div class="kachel"><b>{{ gesamt.logins_30 }} von {{ gesamt.links_30 }}</b><span>Login-Links genutzt (30 Tage)</span></div>
     <div class="kachel"><b>{{ summen.freigaben_aufrufe|zahl }}</b><span>Aufrufe geteilter Links, zuletzt {{ gesamt.freigabe_zuletzt|vor }}</span></div>
+    <div class="kachel"><b>{{ summen.widget_abrufe|zahl }}</b><span>Abrufe Widget/Tracking-App, zuletzt {{ gesamt.widget_zuletzt|vor }}</span></div>
+    <div class="kachel"><b>{{ summen.gpx|zahl }}</b><span>GPX-Tracks{% if summen.gpx_km %}, {{ summen.gpx_km|km }}{% endif %}</span></div>
     <div class="kachel"><b>{{ summen.tomtom_30|zahl }}</b><span>TomTom-Abrufe (30 Tage)</span></div>
   </div>
 
@@ -36,7 +38,7 @@
       <thead><tr>
         <th>Familie</th><th>zuletzt genutzt</th><th>zuletzt bearbeitet</th><th class="z">Personen</th>
         <th class="z">Orte</th><th class="z">Reisen</th><th class="z">Etappen</th><th class="z">Buchungen</th>
-        <th class="z">Freigaben</th><th class="z">Kalender-Abos</th><th class="z">Erinnerungen</th>
+        <th class="z">GPX-Tracks</th><th class="z">Freigaben</th><th class="z">Kalender-Abos</th><th class="z">Widget</th><th class="z">Erinnerungen</th>
         <th class="z">TomTom (30 T.)</th>
       </tr></thead>
       <tbody>
@@ -50,13 +52,15 @@
           <td class="z">{{ z.reisen|default:0 }}{% if z.reisen %}<small>{{ z.reisen_kommend }} kommend{% if z.reisen_laufend %}, {{ z.reisen_laufend }} unterwegs{% endif %}</small>{% endif %}</td>
           <td class="z">{{ z.etappen|default:0 }}{% if z.km %}<small>{{ z.km|km }}</small>{% endif %}</td>
           <td class="z">{{ z.buchungen|default:0 }}</td>
+          <td class="z">{{ z.gpx|default:0 }}{% if z.gpx_km %}<small>{{ z.gpx_km|km }}</small>{% endif %}</td>
           <td class="z">{{ z.freigaben_aktiv|default:0 }} aktiv{% if z.freigaben %}<small>{{ z.freigaben }} insgesamt, {{ z.freigaben_aufrufe|default:0 }} Aufrufe</small>{% endif %}{% if z.freigabe_zuletzt %}<small>zuletzt {{ z.freigabe_zuletzt|vor }}</small>{% endif %}</td>
           <td class="z">{{ z.abos_aktiv|default:0 }}{% if z.abo_zuletzt %}<small>abgerufen {{ z.abo_zuletzt|vor }}</small>{% endif %}</td>
+          <td class="z">{{ z.widget_aktiv|default:0 }} aktiv{% if z.widget_abrufe %}<small>{{ z.widget_abrufe|zahl }} Abrufe</small>{% endif %}{% if z.widget_zuletzt %}<small>zuletzt {{ z.widget_zuletzt|vor }}</small>{% endif %}</td>
           <td class="z">{{ z.erinnerungen_offen|default:0 }} offen{% if z.erinnerungen_gesendet %}<small>{{ z.erinnerungen_gesendet }} verschickt</small>{% endif %}</td>
           <td class="z">{{ z.tomtom_30|default:0|zahl }}</td>
         </tr>
       {% empty %}
-        <tr><td colspan="12">Noch keine Familien angelegt.</td></tr>
+        <tr><td colspan="14">Noch keine Familien angelegt.</td></tr>
       {% endfor %}
       </tbody>
       {% if zeilen|length > 1 %}
@@ -64,7 +68,9 @@
         <td>Summe</td><td></td><td></td><td class="z">{{ summen.aktive_personen }}</td><td class="z">{{ summen.orte }}</td>
         <td class="z">{{ summen.reisen }}<small>{{ summen.reisen_kommend }} kommend</small></td>
         <td class="z">{{ summen.etappen }}<small>{{ summen.km|km }}</small></td><td class="z">{{ summen.buchungen }}</td>
+        <td class="z">{{ summen.gpx }}{% if summen.gpx_km %}<small>{{ summen.gpx_km|km }}</small>{% endif %}</td>
         <td class="z">{{ summen.freigaben_aktiv }} aktiv</td><td class="z">{{ summen.abos_aktiv }}</td>
+        <td class="z">{{ summen.widget_aktiv }} aktiv<small>{{ summen.widget_abrufe|zahl }} Abrufe</small></td>
         <td class="z">{{ summen.erinnerungen_offen }} offen</td><td class="z">{{ summen.tomtom_30|zahl }}</td>
       </tr></tfoot>
       {% endif %}
@@ -74,7 +80,8 @@
     „Zuletzt genutzt“ ist der letzte Seitenaufruf einer angemeldeten Person (auf fünf Minuten genau) oder
     ihr letzter Login oder ihre letzte Änderung. „Zuletzt bearbeitet“ kommt aus dem Änderungsprotokoll der Verwaltung.
     Aktiv sind Freigaben, die weder beendet noch abgelaufen sind; offen sind Erinnerungen, die weder verschickt noch
-    erledigt sind. Inhalte der Familien (Titel, Orte, Texte) erscheinen hier bewusst nicht.
+    erledigt sind. Widget und Tracking-App teilen sich einen Link je Person; ihre Abrufe werden gemeinsam
+    gezählt, und zwar seit der Link erstellt wurde. Inhalte der Familien (Titel, Orte, Texte) erscheinen hier bewusst nicht.
     {% if gesamt.ohne_familie %}{{ gesamt.ohne_familie }} Person{{ gesamt.ohne_familie|pluralize:"en" }} ohne Familie.{% endif %}
   </p>
 </div>

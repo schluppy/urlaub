@@ -9,9 +9,9 @@ from django.contrib.admin.models import LogEntry
 from django.db.models import Count, Max, Q, Sum
 from django.utils import timezone
 
-from freigaben.models import Freigabe, Kalenderabo
+from freigaben.models import Freigabe, Kalenderabo, Widgetzugang
 from orte.models import Ort
-from reisen.models import Buchung, Erinnerung, Etappe, Reise
+from reisen.models import Buchung, Erinnerung, Etappe, Reise, Track
 
 from .models import ApiNutzung, Familie, MagicLinkToken, Person
 
@@ -44,6 +44,7 @@ def kennzahlen():
     etappen = _je_familie(Etappe.objects.all(), "reise__familie", etappen=Count("pk"),
                           km=Sum("entfernung_km"))
     buchungen = _je_familie(Buchung.objects.all(), "reise__familie", buchungen=Count("pk"))
+    tracks = _je_familie(Track.objects.all(), "reise__familie", gpx=Count("pk"), gpx_km=Sum("entfernung_km"))
     freigaben = _je_familie(
         Freigabe.objects.all(),
         freigaben=Count("pk"),
@@ -53,6 +54,11 @@ def kennzahlen():
         Kalenderabo.objects.all(), "person__familie",
         abos_aktiv=Count("pk", filter=Q(beendet_am__isnull=True, person__is_active=True)),
         abo_zuletzt=Max("zuletzt_am", filter=Q(beendet_am__isnull=True)))
+    # Ein Zugang gilt für Widget und Tracking-App; die Abrufe zählen beide zusammen.
+    widget = _je_familie(
+        Widgetzugang.objects.all(), "person__familie",
+        widget_aktiv=Count("pk", filter=Q(beendet_am__isnull=True, person__is_active=True)),
+        widget_abrufe=Sum("abrufe"), widget_zuletzt=Max("zuletzt_am"))
     erinnerungen = _je_familie(
         Erinnerung.objects.all(),
         erinnerungen_offen=Count("pk", filter=Q(erledigt=False, gesendet_am__isnull=True)),
@@ -65,7 +71,8 @@ def kennzahlen():
     zeilen = []
     for familie in Familie.objects.all():
         z = {"familie": familie}
-        for quelle in (personen, orte, reisen, etappen, buchungen, freigaben, abos, erinnerungen, tomtom, bearbeitet):
+        for quelle in (personen, orte, reisen, etappen, buchungen, tracks, freigaben, abos, widget,
+                       erinnerungen, tomtom, bearbeitet):
             z.update(quelle.get(familie.pk, {}))
         z["zuletzt_genutzt"] = _spaetester(z.get("zuletzt_aktiv"), z.get("letzter_login"),
                                            z.get("zuletzt_bearbeitet"))
@@ -74,8 +81,8 @@ def kennzahlen():
 
     summen = {}
     for schluessel in ("personen", "aktive_personen", "aktiv_30", "orte", "reisen", "reisen_kommend",
-                       "reisen_laufend", "etappen", "km", "buchungen", "freigaben", "freigaben_aktiv",
-                       "freigaben_aufrufe", "abos_aktiv", "erinnerungen_offen", "erinnerungen_gesendet",
+                       "reisen_laufend", "etappen", "km", "buchungen", "gpx", "gpx_km", "freigaben",
+                       "freigaben_aktiv", "freigaben_aufrufe", "abos_aktiv", "widget_aktiv", "widget_abrufe", "erinnerungen_offen", "erinnerungen_gesendet",
                        "tomtom_30", "aenderungen_30"):
         summen[schluessel] = sum(z.get(schluessel) or 0 for z in zeilen)
 
@@ -90,5 +97,6 @@ def kennzahlen():
         "links_30": tokens.count(),
         "logins_30": tokens.filter(verwendet_am__isnull=False).count(),
         "freigabe_zuletzt": Freigabe.objects.aggregate(m=Max("zuletzt_am"))["m"],
+        "widget_zuletzt": Widgetzugang.objects.aggregate(m=Max("zuletzt_am"))["m"],
     }
     return {"zeilen": zeilen, "summen": summen, "gesamt": gesamt}
