@@ -195,6 +195,7 @@ class MainActivity : Activity() {
             if (speicher.autoAdresse == null) "Auto gewählt" else null) + rechte.filterNot { it.erteilt }.map { it.name }
         val kurz = mutableListOf(if (fehlt.isEmpty()) "✓ Alles eingerichtet" else "✗ Es fehlt: " + fehlt.joinToString(", "))
         speicher.fehler?.let { kurz += "⚠ $it" }
+        speicher.planFehler?.let { kurz += "⚠ Hintergrund-Abruf nicht eingeplant: $it" }
         findViewById<TextView>(R.id.einrichtung_kurz).text = kurz.joinToString("\n")
 
         val einrichtung = listOf(

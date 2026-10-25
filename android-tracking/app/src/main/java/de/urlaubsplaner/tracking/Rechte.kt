@@ -19,7 +19,7 @@ object Rechte {
         context.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(context.packageName)
 
     /** Android entzieht die Berechtigungen nicht, wenn die App lange nicht benutzt wird. */
-    fun bleiben(context: Context) = context.packageManager.isAutoRevokeWhitelisted
+    fun bleiben(context: Context) = runCatching { context.packageManager.isAutoRevokeWhitelisted }.getOrDefault(false)
 
     fun alle(context: Context) = listOf(
         Recht("Standort „immer“", hat(context, Manifest.permission.ACCESS_FINE_LOCATION) &&

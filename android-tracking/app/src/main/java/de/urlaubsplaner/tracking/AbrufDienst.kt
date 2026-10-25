@@ -40,11 +40,10 @@ class AbrufDienst : JobService() {
         private const val VERALTET = 6L * 60 * 60 * 1000    // öfter als beim Widget: kurz vor der Abfahrt ändert sich der Plan noch
         private const val ABSTAND = 2L * 60 * 60 * 1000    // so oft schaut der Job nach, ob ein Abruf fällig ist
 
-        /** Den regelmäßigen Abruf einplanen, falls er noch nicht geplant ist. */
-        fun planen(context: Context) {
+        /** Den regelmäßigen Abruf einplanen, falls er noch nicht geplant ist. Darf die App nie abstürzen lassen. */
+        fun planen(context: Context) = try {
             val scheduler = context.getSystemService(JobScheduler::class.java)
-            if (scheduler.getPendingJob(JOB_ID) != null) return
-            scheduler.schedule(
+            if (scheduler.getPendingJob(JOB_ID) == null) scheduler.schedule(
                 JobInfo.Builder(JOB_ID, ComponentName(context, AbrufDienst::class.java))
                     .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
                     .setPeriodic(ABSTAND)
@@ -52,6 +51,9 @@ class AbrufDienst : JobService() {
                     .setPersisted(true)   // übersteht einen Neustart des Handys
                     .build()
             )
+            Speicher(context).planFehler = null
+        } catch (e: Exception) {
+            Speicher(context).planFehler = e.toString()
         }
 
         private val tag = DateTimeFormatter.ofPattern("EE dd.MM.", Locale.GERMAN)

@@ -39,6 +39,11 @@ class Speicher(private val context: Context) {
     val stand: Long get() = prefs.getLong("stand", 0)
     val fehler: String? get() = prefs.getString("fehler", null)
 
+    /** Warum der Hintergrund-Abruf nicht eingeplant werden konnte – zur Anzeige in der App. */
+    var planFehler: String?
+        get() = prefs.getString("plan_fehler", null)
+        set(wert) = prefs.edit().putString("plan_fehler", wert).apply()
+
     /** An welchem Tag zuletzt auf fehlende Rechte hingewiesen wurde (JJJJ-MM-TT) – höchstens einmal am Tag. */
     var rechteGemeldet: String?
         get() = prefs.getString("rechte_gemeldet", null)

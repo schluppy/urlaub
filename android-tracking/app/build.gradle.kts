@@ -12,8 +12,8 @@ android {
         applicationId = "de.urlaubsplaner.tracking"
         minSdk = 33
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3"
+        versionCode = 4
+        versionName = "0.4"
     }
 
     // Derselbe feste Schlüssel wie beim Handy-Widget (siehe bauen.sh), damit Updates
