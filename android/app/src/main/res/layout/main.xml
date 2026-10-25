@@ -34,6 +34,23 @@
             android:textSize="16sp" />
 
         <Button
+            android:id="@+id/details_knopf"
+            style="?android:attr/borderlessButtonStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Details anzeigen"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/details"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:alpha="0.7"
+            android:lineSpacingExtra="4dp"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <Button
             android:id="@+id/aktualisieren"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

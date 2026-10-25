@@ -8,6 +8,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
@@ -19,6 +20,7 @@ import java.util.Date
 /** Einrichten, Stand ansehen und von Hand aktualisieren. */
 class MainActivity : Activity() {
     private lateinit var speicher: Speicher
+    private var detailsOffen = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,6 +28,10 @@ class MainActivity : Activity() {
         speicher = Speicher(this)
 
         findViewById<Button>(R.id.aktualisieren).setOnClickListener { abrufen() }
+        findViewById<Button>(R.id.details_knopf).setOnClickListener {
+            detailsOffen = !detailsOffen
+            detailsZeigen()
+        }
         findViewById<Button>(R.id.oeffnen).setOnClickListener {
             speicher.naechste()?.link?.takeIf { it.isNotEmpty() }?.let {
                 startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it)))
@@ -90,8 +96,8 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    /** Was Android im Hintergrund zulässt und wann Abruf und Wecker zuletzt liefen. */
-    private fun hintergrund(): String {
+    /** Wann Tage und Reisedaten zuletzt von selbst aktualisiert wurden und was Android im Hintergrund zulässt. */
+    private fun details(): String {
         fun wann(zeit: Long) = if (zeit == 0L) "noch nie"
             else DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(zeit))
         val gruppe = when (getSystemService(UsageStatsManager::class.java).appStandbyBucket) {
@@ -102,18 +108,23 @@ class MainActivity : Activity() {
             UsageStatsManager.STANDBY_BUCKET_RESTRICTED -> "eingeschränkt"
             else -> "unbekannt"
         }
-        val zeilen = mutableListOf(
-            "Hintergrund-Abruf: " + (if (AbrufDienst.geplant(this)) "geplant" else "NICHT geplant") +
-                ", zuletzt gestartet " + wann(speicher.letzterJob),
-            "Wecker zuletzt: " + wann(speicher.letzterWecker),
+        return listOf(
+            "Tage zuletzt aktualisiert: " + wann(speicher.letzterWecker),
+            "Reisedaten zuletzt aktualisiert: " + wann(speicher.letzterJob),
+            "Automatische Aktualisierung: " + (if (AbrufDienst.geplant(this)) "geplant" else "NICHT geplant"),
             "Android-Gruppe: $gruppe",
-        )
+        ).joinToString("\n")
+    }
+
+    /** Hinweise, die auch bei eingeklappten Details sichtbar bleiben. */
+    private fun warnungen(): List<String> {
+        val zeilen = mutableListOf<String>()
         speicher.planFehler?.let { zeilen += "⚠ Einplanen fehlgeschlagen: $it" }
         if (getSystemService(ActivityManager::class.java).isBackgroundRestricted) {
             zeilen += "⚠ Die Akkunutzung der App ist „Eingeschränkt“. Bitte unter App-Info → Akkunutzung " +
                 "auf „Optimiert“ stellen, sonst aktualisiert sich das Widget nicht von selbst."
         }
-        return zeilen.joinToString("\n")
+        return zeilen
     }
 
     private fun anzeigen() {
@@ -130,8 +141,19 @@ class MainActivity : Activity() {
         if (speicher.stand != 0L) {
             zeilen += "\nStand: " + DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(speicher.stand))
         }
-        if (speicher.url != null) zeilen += "\n" + hintergrund()
+        if (speicher.url != null) warnungen().takeIf { it.isNotEmpty() }?.let { zeilen += "\n" + it.joinToString("\n") }
         findViewById<TextView>(R.id.status).text = zeilen.joinToString("\n")
         findViewById<Button>(R.id.oeffnen).isEnabled = anzeige.reise?.link?.isNotEmpty() == true
+        findViewById<Button>(R.id.details_knopf).visibility = if (speicher.url != null) View.VISIBLE else View.GONE
+        detailsZeigen()
+    }
+
+    private fun detailsZeigen() {
+        val offen = detailsOffen && speicher.url != null
+        findViewById<Button>(R.id.details_knopf).text = if (offen) "Details ausblenden" else "Details anzeigen"
+        findViewById<TextView>(R.id.details).apply {
+            visibility = if (offen) View.VISIBLE else View.GONE
+            if (offen) text = details()
+        }
     }
 }
