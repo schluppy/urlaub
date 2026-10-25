@@ -32,16 +32,39 @@
   if (Object.keys(grundkarten).length > 1) L.control.layers(grundkarten, null, { position: "topright" }).addTo(karte);
   L.control.scale({ imperial: false }).addTo(karte);
   karte.on("baselayerchange", (ev) => { try { localStorage.setItem(SPEICHER, ev.name); } catch (e) { /* privat */ } });
+  // Neben der Statistik wächst die Karte mit deren Höhe; Leaflet muss die neue Größe kennen
+  if (window.ResizeObserver) new ResizeObserver(() => karte.invalidateSize()).observe(el);
   // Mausrad erst nach Klick, damit die Seite beim Scrollen nicht in der Karte hängen bleibt
   karte.on("click", () => karte.scrollWheelZoom.enable());
 
   const grenzen = [];
+  const linien = {};
   strecken.forEach((s) => {
     const linie = L.polyline(s.punkte, {
       color: s.farbe || "#173F73", weight: s.breite || 4, opacity: 0.85, dashArray: s.gerade ? "6 8" : null,
     }).bindTooltip(s.text + (s.gerade ? " (Luftlinie – Route noch nicht berechnet)" : ""), { sticky: true });
     linie.addTo(karte);
     grenzen.push(...s.punkte);
+    if (s.etappe) {
+      linien[s.etappe] = linie;
+      // Klick auf eine gefahrene Etappe zeigt ihre Statistik neben der Karte (fahrt.js)
+      linie.on("click", () => document.dispatchEvent(new CustomEvent("fahrt:waehlen", { detail: { etappe: s.etappe } })));
+    }
+  });
+
+  // Statistik neben der Karte: gewählte Etappe hervorheben, Position zum Wert unter dem Mauszeiger im Diagramm
+  let hervorgehoben = null;
+  document.addEventListener("fahrt:gewaehlt", (ev) => {
+    if (hervorgehoben) hervorgehoben.setStyle({ weight: 4, color: "#173F73" });
+    hervorgehoben = linien[ev.detail.etappe] || null;
+    if (!hervorgehoben) return;
+    hervorgehoben.setStyle({ weight: 6, color: "#2E7D6E" }).bringToFront();
+    if (ev.detail.zoomen) karte.fitBounds(hervorgehoben.getBounds(), { padding: [30, 30], maxZoom: 13 });
+  });
+  const position = L.circleMarker([0, 0], { radius: 7, color: "#fff", weight: 2, fillColor: "#C0392B", fillOpacity: 1, interactive: false });
+  document.addEventListener("fahrt:punkt", (ev) => {
+    if (ev.detail) position.setLatLng(ev.detail).addTo(karte);
+    else position.remove();
   });
 
   const text = (t) => { const d = document.createElement("div"); d.textContent = t; return d.innerHTML; };

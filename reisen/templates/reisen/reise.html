@@ -3,7 +3,8 @@
 {% block titel %}{{ reise.titel }}{% endblock %}
 {% block kopf %}<link rel="stylesheet" href="{% static 'vendor/leaflet/leaflet.css' %}">
 <script src="{% static 'vendor/leaflet/leaflet.js' %}" defer></script>
-<script src="{% static 'reisen/karte.js' %}" defer></script>{% endblock %}
+<script src="{% static 'reisen/karte.js' %}" defer></script>
+<script src="{% static 'reisen/fahrt.js' %}" defer></script>{% endblock %}
 {% block inhalt %}
 <p class="brotkrumen"><a href="{% url 'portal:jahr' reise.jahr %}">Reisen {{ reise.jahr }}</a></p>
 <div class="reisekopf" style="--monat: {{ farbe }}">

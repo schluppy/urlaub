@@ -111,7 +111,7 @@ def kartendaten(reise, oeffentlich=False):
             punkte = ohne_zuhause(punkte, zuhause)
             if len(punkte) < 2:
                 continue
-        strecken.append({"punkte": punkte, "gerade": not linie, "text": text})
+        strecken.append({"punkte": punkte, "gerade": not linie, "text": text, "etappe": e.pk})
     return {"orte": list(orte.values()), "strecken": strecken, "luftlinie": any(s["gerade"] for s in strecken)}
 
 
@@ -145,7 +145,7 @@ def _kontext(reise):
         "kosten": list(reise.kosten.all()), "links": list(reise.links.all()), "tracks": list(reise.tracks.defer("gpx", "linie")),
         "posten": posten, "balken": balken, "hinweise": reise.hinweise(),
         "farbe": MONATSFARBEN[reise.urlaub_beginn.month - 1],
-        "karte": kartendaten(reise),
+        "karte": kartendaten(reise), "fahrten": gpx.fahrten(reise),
     }
 
 

@@ -1,0 +1,37 @@
+{% load urlaub %}
+<section class="fahrt flaeche" aria-label="Statistik der gefahrenen Strecke">
+  <div class="fahrt-kopf">
+    <h3>Gefahrene Strecke</h3>
+    {% if fahrten|length > 1 %}<select class="fahrt-wahl" aria-label="Etappe">
+      {% for f in fahrten %}<option value="{{ f.etappe.pk }}">{{ f.etappe.datum|date:"D d.m." }} {{ f.etappe.von_ort }} → {{ f.etappe.nach_ort }}</option>{% endfor %}
+    </select>{% endif %}
+  </div>
+  {% for f in fahrten %}
+  <div class="fahrt-etappe" data-etappe="{{ f.etappe.pk }}"{% if not forloop.first %} hidden{% endif %}>
+    {% if fahrten|length == 1 %}<p class="klein leise">{{ f.etappe.datum|date:"D d.m." }} {{ f.etappe.von_ort }} → {{ f.etappe.nach_ort }} · ab {{ f.uhrzeit|slice:":5" }}</p>{% endif %}
+    <dl class="fahrt-werte">
+      <div><dt>Strecke</dt><dd>{{ f.km|zahl:1 }} <small>km</small></dd></div>
+      <div><dt>Höchstgeschwindigkeit</dt><dd>{{ f.hoechst_kmh|zahl }} <small>km/h</small></dd></div>
+      <div><dt>Aufzeichnung</dt><dd>{{ f.dauer|dauer }}</dd></div>
+      <div><dt>Ø Geschwindigkeit</dt><dd>{{ f.schnitt_kmh|zahl }} <small>km/h</small></dd></div>
+      <div><dt>in Bewegung</dt><dd>{{ f.bewegung|dauer }}</dd></div>
+      <div><dt>Ø in Bewegung</dt><dd>{{ f.schnitt_bewegt_kmh|zahl }} <small>km/h</small></dd></div>
+      {% if f.hoehe %}
+      <div><dt>Höhenunterschied</dt><dd>{{ f.hoehe.unterschied|zahl }} <small>m</small></dd></div>
+      <div><dt>Anstieg / Abstieg</dt><dd>{{ f.hoehe.anstieg|zahl }} <small>/</small> {{ f.hoehe.abstieg|zahl }} <small>m</small></dd></div>
+      <div><dt>höchster Punkt</dt><dd>{{ f.hoehe.max|zahl }} <small>m</small></dd></div>
+      <div><dt>tiefster Punkt</dt><dd>{{ f.hoehe.min|zahl }} <small>m</small></dd></div>
+      {% endif %}
+    </dl>
+    {{ f.diagramm|json_script:f.diagramm_id }}
+  </div>
+  {% endfor %}
+  <div class="fahrt-diagramme" hidden>
+    <div class="fahrt-achse" role="group" aria-label="Diagramme über">
+      <button type="button" data-achse="km" aria-pressed="true">Strecke</button><button type="button" data-achse="t" aria-pressed="false">Dauer</button>
+    </div>
+    <p class="fahrt-wert klein" aria-live="polite">&nbsp;</p>
+    <figure><figcaption class="klein leise">Geschwindigkeit (km/h)</figcaption><div class="fahrt-diagramm" data-art="kmh"></div></figure>
+    <figure class="fahrt-hoehe"><figcaption class="klein leise">Höhe (m)</figcaption><div class="fahrt-diagramm" data-art="hoehe"></div></figure>
+  </div>
+</section>

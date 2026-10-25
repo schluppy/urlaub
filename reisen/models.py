@@ -602,6 +602,7 @@ class Track(models.Model):
     entfernung_km = models.DecimalField("Entfernung (km)", max_digits=7, decimal_places=1)
     fahrzeit = models.DurationField("Fahrzeit", help_text="ohne Pausen zwischen den Teilstücken")
     linie = models.JSONField(default=list, editable=False)   # vereinfacht [[lat, lon], …] wie bei TomTom
+    statistik = models.JSONField(default=dict, editable=False)   # gpx.statistik(); leer bei Tracks von vor 0012
     gpx = models.TextField(editable=False)
     hochgeladen_am = models.DateTimeField("hochgeladen am", auto_now_add=True)
 

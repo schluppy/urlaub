@@ -1,5 +1,5 @@
 import gzip
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
 from django.test import TestCase
@@ -39,6 +39,30 @@ class LesenTest(TestCase):
         self.assertEqual(werte["fahrzeit"], timedelta(minutes=4))
         self.assertEqual(werte["linie"][0], [54.30, 10.13])
         self.assertEqual(werte["linie"][-1], [54.32, 10.13])
+
+    def test_statistik(self):
+        s = gpx.kennzahlen(gpx.lesen(FAHRT)[1])["statistik"]
+        self.assertEqual((s["meter"], s["dauer_s"]), (2224, 300))      # Aufzeichnung samt Pause zwischen den Segmenten
+        self.assertEqual(s["bewegung_s"], 240)
+        self.assertAlmostEqual(s["hoechst_kmh"], 33.4, delta=0.1)
+        self.assertEqual(s["hoehe"], {"min": 4, "max": 4, "anstieg": 0, "abstieg": 0})
+        self.assertEqual(s["reihe"][0], [0, 0.0, 0.0, 4, 54.3, 10.13])
+        self.assertEqual(s["reihe"][-1][:3], [300, 2.22, 0.0])
+
+    def test_stillstand_und_hoehe(self):
+        t0 = datetime(2026, 10, 24, 12, tzinfo=timezone.utc)
+        # 2 Minuten Stand mit zitternder Position und Höhe, dann anderthalb Minuten mit 60 km/h 40 m hinauf und 30 m hinab
+        stand = [(t0 + timedelta(seconds=i), 54.3 + (i % 2) * 0.00003, 10.13, 40 + (i % 3)) for i in range(120)]
+        fahrt = [(t0 + timedelta(seconds=120 + i), 54.3 + i * 0.00015, 10.13, 40 + 2 * min(i, 20) - 1.5 * min(max(0, i - 40), 20))
+                 for i in range(91)]
+        s = gpx.statistik([stand + fahrt])
+        self.assertEqual(s["bewegung_s"], 90)
+        self.assertAlmostEqual(s["hoechst_kmh"], 60, delta=1)
+        self.assertAlmostEqual(s["hoehe"]["anstieg"], 40, delta=4)   # über 10 s gemittelt, das Zittern im Stand zählt nicht
+        self.assertAlmostEqual(s["hoehe"]["abstieg"], 30, delta=4)
+        ohne = gpx.statistik([[(p[0], p[1], p[2], None) for p in fahrt]])
+        self.assertIsNone(ohne["hoehe"])
+        self.assertIsNone(ohne["reihe"][1][3])
 
     def test_gzip_und_kaputte_dateien(self):
         self.assertEqual(gpx.entpacken(gzip.compress(FAHRT)), FAHRT)
@@ -121,6 +145,18 @@ class RouteAusGpxTest(TestCase):
         self.assertNotIn("verbrauch_l", e.routing_details)
         self.assertEqual(e.routing_details["linie"][-1], [54.32, 10.13])
         self.assertEqual(Etappe.objects.get(pk=self.weiter.pk).entfernung_km, Decimal("90.0"))
+
+    def test_statistik_erst_nach_dem_ersetzen(self):
+        track, _ = gpx.speichern(self.reise, FAHRT)
+        self.assertNotContains(self.client.get(self.seite), "Gefahrene Strecke</h3>")
+        Track.objects.filter(pk=track.pk).update(statistik={})   # Track von vor der Statistik
+        self.client.post(reverse("reisen:route", args=[self.reise.pk]), {"quelle": "gpx"})
+        seite = self.client.get(self.seite)
+        self.assertContains(seite, "Gefahrene Strecke</h3>")
+        self.assertContains(seite, f'id="fahrt-{self.zur_faehre.pk}"')
+        self.assertContains(seite, "<dt>Höchstgeschwindigkeit</dt><dd>33 <small>km/h</small>")
+        self.assertContains(seite, "<dt>in Bewegung</dt><dd>0:04 h</dd>")
+        self.assertTrue(Track.objects.get(pk=track.pk).statistik)    # nachgerechnet und gespeichert
 
     def test_track_ohne_etappe_wird_gemeldet(self):
         gpx.speichern(self.reise, FAHRT.replace(b"2026-10-24", b"2026-10-26"))

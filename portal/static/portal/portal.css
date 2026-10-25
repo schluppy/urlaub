@@ -233,3 +233,32 @@ dl.begriffe dd, dl.fragen dd { margin: 0.15rem 0 0 0; }
 .gesamtroute .links { margin-left: auto; white-space: nowrap; }
 .anleitung-seite table.ortstypen ul { margin: 0; padding-left: 1.1rem; }
 .anleitung-seite section .tabelle-rahmen { margin: 0.6rem 0; }
+
+/* Gefahrene Strecke (GPX) neben der Karte; schmal darunter */
+.karte-raster { display: grid; gap: 1rem; }
+@media (min-width: 56rem) {
+  .karte-raster { grid-template-columns: minmax(0, 3fr) minmax(19rem, 2fr); align-items: stretch; }
+  .karte-spalte { display: flex; flex-direction: column; }
+  .karte-spalte .karte { flex: 1; min-height: 26rem; height: auto; }
+}
+.fahrt { margin: 0; min-width: 0; }
+.fahrt-kopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 0.8rem; }
+.fahrt-kopf h3 { margin: 0; }
+.fahrt-wahl { font: inherit; font-size: 0.85rem; padding: 0.2rem 0.4rem; border: 1px solid var(--linie); border-radius: 4px; background: var(--weiss); max-width: 100%; }
+.fahrt-etappe > p { margin: 0.2rem 0 0; }
+.fahrt-werte { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; margin: 0.7rem 0; }
+.fahrt-werte div { border-bottom: 1px solid var(--linie); padding-bottom: 0.3rem; }
+.fahrt-werte dt { font-size: 0.75rem; color: var(--grau); }
+.fahrt-werte dd { margin: 0; font-family: var(--schmal); font-weight: 600; font-size: 1.45rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.fahrt-werte small { font-size: 0.9rem; font-weight: 500; color: var(--grau); }
+.fahrt-achse { display: inline-flex; border: 1px solid var(--linie); border-radius: 999px; overflow: hidden; }
+.fahrt-achse button { font: inherit; font-size: 0.8rem; padding: 0.15rem 0.7rem; border: 0; background: var(--weiss); color: var(--blau); cursor: pointer; }
+.fahrt-achse button[aria-pressed=true] { background: var(--blau); color: var(--weiss); }
+.fahrt-wert { margin: 0.3rem 0 0; min-height: 1.3em; font-variant-numeric: tabular-nums; }
+.fahrt figure { margin: 0.4rem 0 0; }
+.fahrt figure[hidden] { display: none; }
+.fahrt-diagramm { touch-action: pan-y; }
+.fahrt-diagramm svg { display: block; overflow: visible; }
+.fahrt-diagramm .gitter { stroke: var(--linie); stroke-width: 1; }
+.fahrt-diagramm .beschriftung { font-size: 10px; fill: var(--grau); }
+.fahrt-diagramm .kreuz { stroke: var(--grau); stroke-width: 1; stroke-dasharray: 3 3; }
