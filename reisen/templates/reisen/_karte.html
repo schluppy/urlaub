@@ -1,5 +1,5 @@
 <h2>Karte</h2>
-{% if fahrten %}<div class="karte-raster"><div class="karte-spalte">{% endif %}
+{% if fahrten %}<div class="karte-raster">{% endif %}
 <div id="karte" class="karte"{% if tomtom %} data-tomtom="{% url 'reisen:kachel' 0 0 0 %}"{% endif %} role="region" aria-label="Karte der Reise"></div>
 <p class="klein leise karte-legende">
   {% if tomtom %}<span><i class="farbpunkt rund" style="background:#173F73"></i>Zuhause</span>{% endif %}
@@ -8,5 +8,5 @@
   <span><i class="farbpunkt rund" style="background:#1F6F8B"></i>Fährterminal</span>
   {% if karte.luftlinie %}<span>gestrichelt: Luftlinie, Route noch nicht berechnet</span>{% endif %}
 </p>
-{% if fahrten %}</div>{% include "reisen/_fahrt.html" %}</div>{% endif %}
+{% if fahrten %}{% include "reisen/_fahrt.html" %}</div>{% endif %}
 {{ karte|json_script:"kartendaten" }}

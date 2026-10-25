@@ -235,12 +235,20 @@ dl.begriffe dd, dl.fragen dd { margin: 0.15rem 0 0 0; }
 .anleitung-seite section .tabelle-rahmen { margin: 0.6rem 0; }
 
 /* Gefahrene Strecke (GPX) neben der Karte; schmal darunter */
-.karte-raster { display: grid; gap: 1rem; }
+/* Raster statt Spalten: Karte und Kasten in einer Zeile gleich hoch, die Legenden darunter in der nächsten */
+.karte-raster { display: grid; column-gap: 1rem;
+  grid-template-areas: "karte" "legende" "fahrt" "fahrt-legende"; }
+.karte-raster > .karte { grid-area: karte; }
+.karte-raster > .karte-legende { grid-area: legende; margin-bottom: 1rem; }
+.karte-raster > .fahrt { grid-area: fahrt; }
+.karte-raster > .fahrt-legende { grid-area: fahrt-legende; margin-bottom: 0; }
 @media (min-width: 56rem) {
-  .karte-raster { grid-template-columns: minmax(0, 3fr) minmax(19rem, 2fr); align-items: stretch; }
-  .karte-spalte { display: flex; flex-direction: column; }
-  .karte-spalte .karte { flex: 1; min-height: 26rem; height: auto; }
+  .karte-raster { grid-template-columns: minmax(0, 3fr) minmax(19rem, 2fr);
+    grid-template-areas: "karte fahrt" "legende fahrt-legende"; }
+  .karte-raster > .karte { height: auto; min-height: 26rem; }
+  .karte-raster > .karte-legende { margin-bottom: 0; }
 }
+.strich { display: inline-block; width: 1.3rem; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 0.35rem; }
 .fahrt { margin: 0; min-width: 0; }
 .fahrt-kopf { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.3rem 0.8rem; }
 .fahrt-kopf h3 { margin: 0; }
