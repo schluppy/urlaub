@@ -17,6 +17,7 @@ from reisen.models import Reise
 from reisen.views import _kontext as reise_kontext
 from reisen.views import kartendaten
 
+from . import apk
 from .forms import FreigabeForm
 from .ical import kalender as ical_kalender
 from .models import MAX_TAGE, Art, Freigabe, Kalenderabo, Widgetzugang
@@ -222,8 +223,19 @@ def widget_apk(request):
 
 
 def widget_daten(request, token):
-    """Die nächsten Reisen als JSON."""
-    return _zugang_json(token, widget_daten_fuer)
+    """Die nächsten Reisen als JSON, dazu die Version der App auf dem Server für den Update-Hinweis."""
+    def daten_fuer(familie):
+        app = apk.version(APK)
+        if app:
+            app["download"] = settings.BASIS_URL + reverse("freigaben:widget_apk_link", args=[token])
+        return {**widget_daten_fuer(familie), "app": app}
+    return _zugang_json(token, daten_fuer)
+
+
+def widget_apk_link(request, token):
+    """Die App ohne Anmeldung, nur mit gültigem Widget-Link – für den Update-Knopf in der App."""
+    _zugang(token)
+    return _apk(APK, "urlaubswidget.apk")
 
 
 # --- Handy-App „Tracking“ (Fahrten automatisch aufzeichnen) ----------------------

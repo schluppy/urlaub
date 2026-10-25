@@ -13,6 +13,7 @@ urlpatterns = [
     path("widget/", views.widget, name="widget"),
     path("widget/urlaubswidget.apk", views.widget_apk, name="widget_apk"),
     path("widget/<str:token>.json", views.widget_daten, name="widget_daten"),
+    path("widget/<str:token>/urlaubswidget.apk", views.widget_apk_link, name="widget_apk_link"),
     path("tracking/", views.tracking, name="tracking"),
     path("tracking/tracking.apk", views.tracking_apk, name="tracking_apk"),
     path("widget/<str:token>/etappen.json", views.tracking_daten, name="tracking_daten"),

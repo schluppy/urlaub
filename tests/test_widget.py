@@ -1,9 +1,14 @@
+import struct
+import tempfile
+import zipfile
 from datetime import date, time, timedelta
+from pathlib import Path
 from unittest import mock
 
 from django.test import TestCase
 from django.urls import reverse
 
+from freigaben import apk
 from freigaben.models import Widgetzugang
 from freigaben.widget import daten
 from konten.models import Person
@@ -83,5 +88,45 @@ class ZugangTest(TestCase):
         self.client.logout()
         self.assertEqual(self.client.get(reverse("freigaben:widget_apk")).status_code, 302)
 
+    def test_update_hinweis_und_download_ueber_den_link(self):
+        zugang = Widgetzugang.objects.create(person=self.anna)
+        self.client.logout()
+        with tempfile.TemporaryDirectory() as ordner:
+            datei = Path(ordner) / "urlaubswidget.apk"
+            with mock.patch("freigaben.views.APK", datei):
+                antwort = self.client.get(reverse("freigaben:widget_daten", args=[zugang.token]))
+                self.assertIsNone(antwort.json()["app"])
+                apk_bauen(datei, 5, "1.4")
+                app = self.client.get(reverse("freigaben:widget_daten", args=[zugang.token])).json()["app"]
+                self.assertEqual((app["code"], app["name"]), (5, "1.4"))
+                self.assertTrue(app["download"].endswith(reverse("freigaben:widget_apk_link", args=[zugang.token])))
+                download = self.client.get(reverse("freigaben:widget_apk_link", args=[zugang.token]))
+                self.assertEqual(download["Content-Type"], "application/vnd.android.package-archive")
+                self.assertEqual(self.client.get(reverse("freigaben:widget_apk_link", args=["falsch"])).status_code, 404)
+                zugang.beenden()
+                self.assertEqual(self.client.get(reverse("freigaben:widget_apk_link", args=[zugang.token])).status_code, 404)
+
     def test_knopf_auf_kalenderseite(self):
         self.assertContains(self.client.get(reverse("kalender:jahr", args=[2027])), reverse("freigaben:widget"))
+
+
+def apk_bauen(datei, code, name):
+    """Eine APK, die nur aus einem binären Manifest mit versionCode und versionName besteht."""
+    def block(typ, kopf, inhalt):
+        return struct.pack("<HHI", typ, 8 + len(kopf), 8 + len(kopf) + len(inhalt)) + kopf + inhalt
+
+    texte = ["versionCode", "versionName", name, "manifest"]
+    roh, offsets = b"", []
+    for t in texte:
+        offsets.append(len(roh))
+        roh += struct.pack("<H", len(t)) + t.encode("utf-16-le") + b"\0\0"
+    roh += b"\0" * (-len(roh) % 4)
+    pool = block(0x0001, struct.pack("<IIIII", len(texte), 0, 0, 28 + 4 * len(texte), 0),
+                 struct.pack(f"<{len(texte)}I", *offsets) + roh)
+    ids = block(0x0180, b"", struct.pack("<II", apk.VERSION_CODE, apk.VERSION_NAME))
+    attribute = (struct.pack("<IIIHBBI", 0xFFFFFFFF, 0, 0xFFFFFFFF, 8, 0, apk.TYP_INT_DEC, code)
+                 + struct.pack("<IIIHBBI", 0xFFFFFFFF, 1, 2, 8, 0, apk.TYP_STRING, 2))
+    element = block(0x0102, struct.pack("<II", 1, 0xFFFFFFFF),
+                    struct.pack("<IIHHHHHH", 0xFFFFFFFF, 3, 20, 20, 2, 0, 0, 0) + attribute)
+    with zipfile.ZipFile(datei, "w") as z:
+        z.writestr("AndroidManifest.xml", block(0x0003, b"", pool + ids + element))

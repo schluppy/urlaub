@@ -31,8 +31,11 @@ data class Reise(
     }
 }
 
+/** Neuere Version der App auf dem Server: Anzeigename und Link zum Herunterladen. */
+data class Update(val version: String, val download: String)
+
 /** Gespeicherter Stand: Link, letzte Antwort des Servers, Zeitpunkt und ggf. Fehler. */
-class Speicher(context: Context) {
+class Speicher(private val context: Context) {
     private val prefs = context.getSharedPreferences("urlaub", Context.MODE_PRIVATE)
 
     var url: String?
@@ -57,6 +60,21 @@ class Speicher(context: Context) {
         val json = prefs.getString("json", null) ?: return emptyList()
         return try { lesen(json) } catch (e: Exception) { emptyList() }
     }
+
+    /** Die Version dieser App, z. B. „1.4“. */
+    val version: String get() = paket().versionName ?: ""
+
+    /** Meldet der Urlaubsplaner eine neuere App als die installierte? */
+    fun update(): Update? = try {
+        val app = JSONObject(prefs.getString("json", null) ?: "{}").optJSONObject("app")
+        if (app != null && app.optLong("code") > paket().longVersionCode && app.optString("download").isNotEmpty()) {
+            Update(app.optString("name"), app.getString("download"))
+        } else null
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun paket() = context.packageManager.getPackageInfo(context.packageName, 0)
 
     /** Die nächste Reise, die noch nicht begonnen hat. */
     fun naechste(jetzt: LocalDateTime = LocalDateTime.now()): Reise? = reisen().firstOrNull { !it.begonnen(jetzt) }

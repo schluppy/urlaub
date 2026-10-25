@@ -25,6 +25,35 @@
             android:layout_marginTop="20dp"
             android:contentDescription="@string/widget_beschreibung" />
 
+        <LinearLayout
+            android:id="@+id/update"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/update_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/update_laden"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Update herunterladen" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:alpha="0.7"
+                android:text="Danach die heruntergeladene Datei öffnen und „Aktualisieren“ tippen. Der Widget-Link und das Widget bleiben erhalten."
+                android:textSize="13sp" />
+        </LinearLayout>
+
         <TextView
             android:id="@+id/status"
             android:layout_width="match_parent"

@@ -28,6 +28,9 @@ class MainActivity : Activity() {
         speicher = Speicher(this)
 
         findViewById<Button>(R.id.aktualisieren).setOnClickListener { abrufen() }
+        findViewById<Button>(R.id.update_laden).setOnClickListener {
+            speicher.update()?.let { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(it.download))) }
+        }
         findViewById<Button>(R.id.details_knopf).setOnClickListener {
             detailsOffen = !detailsOffen
             detailsZeigen()
@@ -113,6 +116,7 @@ class MainActivity : Activity() {
             "Reisedaten zuletzt aktualisiert: " + wann(speicher.letzterJob),
             "Automatische Aktualisierung: " + (if (AbrufDienst.geplant(this)) "geplant" else "NICHT geplant"),
             "Android-Gruppe: $gruppe",
+            "App-Version: ${speicher.version}",
         ).joinToString("\n")
     }
 
@@ -144,6 +148,12 @@ class MainActivity : Activity() {
         if (speicher.url != null) warnungen().takeIf { it.isNotEmpty() }?.let { zeilen += "\n" + it.joinToString("\n") }
         findViewById<TextView>(R.id.status).text = zeilen.joinToString("\n")
         findViewById<Button>(R.id.oeffnen).isEnabled = anzeige.reise?.link?.isNotEmpty() == true
+        val update = speicher.update()
+        findViewById<View>(R.id.update).visibility = if (update != null) View.VISIBLE else View.GONE
+        if (update != null) {
+            findViewById<TextView>(R.id.update_text).text =
+                "Neue Version ${update.version} verfügbar (installiert: ${speicher.version})"
+        }
         findViewById<Button>(R.id.details_knopf).visibility = if (speicher.url != null) View.VISIBLE else View.GONE
         detailsZeigen()
     }
