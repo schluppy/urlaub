@@ -5,13 +5,15 @@ from django.contrib import admin, messages
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import path, reverse
+from django.utils import timezone
 from django.utils.html import format_html
 
 from kalender.tage import zeitraum_text
 from konten.mandant import FamilienMixin
 from orte.models import Ort
-from portal.templatetags.urlaub import dauer, euro, km
+from portal.templatetags.urlaub import dauer, euro, km, zahl
 
+from . import gpx
 from .formulare import PickerMixin, PreisFeld
 from .models import Buchung, Erinnerung, Etappe, Kostenposition, Link, Reise, Track
 from .routing import profil_hinweis, reise_routen
@@ -191,6 +193,42 @@ class TrackInline(FamilienMixin, admin.TabularInline):
         return super().get_queryset(request).defer("gpx", "linie")
 
 
+class MehrereDateien(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+
+class GpxFeld(forms.FileField):
+    """Eine oder mehrere GPX-Dateien (auch .gpx.gz); prüft schon beim Absenden, ob sie lesbar sind."""
+    widget = MehrereDateien(attrs={"accept": ".gpx,.gz,application/gpx+xml"})
+
+    def clean(self, data, initial=None):
+        dateien = [d for d in (data if isinstance(data, (list, tuple)) else [data]) if d]
+        if self.required and not dateien:
+            raise forms.ValidationError(self.error_messages["required"])
+        gelesen = []
+        for datei in dateien:
+            try:
+                inhalt = datei.read(gpx.GROESSE_HOECHSTENS + 1)
+                gpx.lesen(gpx.entpacken(inhalt))
+            except gpx.GpxFehler as e:
+                raise forms.ValidationError(f"{datei.name}: {e}")
+            gelesen.append((datei.name, inhalt))
+        return gelesen
+
+
+class ReiseForm(forms.ModelForm):
+    gpx_dateien = GpxFeld(label="GPX-Dateien", required=False,
+                          help_text="Gefahrene Strecken, z. B. aus der App „Tracking“ oder einem Navi. "
+                                    "Mehrere auf einmal möglich; dieselbe Fahrt noch einmal ersetzt die alte.")
+    gpx_uebernehmen = forms.BooleanField(
+        label="Gleich in die Etappen übernehmen", required=False, initial=True,
+        help_text="wie „Route aktualisieren“ → „Gefahrene Strecke aus GPX“ – für alle Tracks der Reise")
+
+    class Meta:
+        model = Reise
+        fields = "__all__"
+
+
 class ErinnerungInline(FamilienMixin, PickerMixin, admin.TabularInline):
     model = Erinnerung
     extra = 0
@@ -216,6 +254,7 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
     search_fields = ["titel", "notizen"]
     date_hierarchy = "von"
     save_on_top = True
+    form = ReiseForm
     inlines = [EtappeInline, BuchungInline, KostenInline, LinkInline, ErinnerungInline, TrackInline]
     fieldsets = [
         (None, {"fields": ["titel", "im_kalender"]}),
@@ -227,8 +266,28 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
         ("Fahrt", {"fields": ["fahrzeugprofil", ("verbrauch_l_100km", "dieselpreis"), "vignetten_meiden"]}),
         ("Berechnet", {"fields": ["berechnet"]}),
         (None, {"fields": ["notizen"]}),
+        # muss der letzte Abschnitt bleiben: change_form.html zeigt ihn unter den GPX-Tracks
+        ("GPX-Tracks hochladen", {"fields": ["gpx_dateien", "gpx_uebernehmen"]}),
     ]
     readonly_fields = ["berechnet"]
+
+    def save_related(self, request, form, formsets, change):
+        # Nach den Etappen: erst dann passt „übernehmen“ auch zu gerade neu angelegten Etappen
+        super().save_related(request, form, formsets, change)
+        dateien = form.cleaned_data.get("gpx_dateien") or []
+        if not dateien:
+            return
+        reise = form.instance
+        for name, inhalt in dateien:
+            track, ersetzt = gpx.speichern(reise, inhalt)
+            messages.success(request, f"{name}: {zahl(track.entfernung_km, 1)} km ab {timezone.localtime(track.beginn):%d.%m. %H:%M} "
+                                      f"{'ersetzt' if ersetzt else 'hochgeladen'}.")
+        if form.cleaned_data.get("gpx_uebernehmen"):
+            anzahl, ohne = gpx.reise_aus_tracks(reise)
+            if anzahl:
+                messages.success(request, f"{anzahl} Etappe{'n' if anzahl != 1 else ''} aus GPX-Tracks übernommen.")
+            for track in ohne:
+                messages.warning(request, f"{track}: keine Etappe am {timezone.localtime(track.beginn):%d.%m.} – nicht übernommen.")
 
     class Media:
         js = ["reisen/eingabe.js"]

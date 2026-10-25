@@ -192,3 +192,56 @@ class HerunterladenTest(TestCase):
         andere = Reise.objects.create(familie=self.f, titel="Andere", von=date(2026, 7, 1), bis=date(2026, 7, 2))
         self.client.force_login(Person.objects.create_user("anna@example.org", familie=self.f))
         self.assertEqual(self.client.get(reverse("reisen:track_gpx", args=[andere.pk, self.track.pk])).status_code, 404)
+
+
+class VerwaltungHochladenTest(TestCase):
+    """Alternative zur App: GPX-Dateien unter „Reise ändern“ hochladen."""
+
+    def setUp(self):
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from .test_eingabe import leere_inlines
+        self.datei = SimpleUploadedFile
+        self.f = fam()
+        self.client.force_login(Person.objects.create_superuser("t@example.org", "T", familie=self.f))
+        a = Ort.objects.create(familie=self.f, name="Zuhause", breite=Decimal("54.30"), laenge=Decimal("10.13"))
+        b = Ort.objects.create(familie=self.f, name="Hafen", breite=Decimal("54.32"), laenge=Decimal("10.13"))
+        self.reise = Reise.objects.create(familie=self.f, titel="Herbst", von=date(2026, 10, 24), bis=date(2026, 11, 1))
+        self.etappe = Etappe.objects.create(reise=self.reise, datum=date(2026, 10, 24), von_ort=a, nach_ort=b,
+                                            entfernung_km=Decimal("3.0"))
+        self.url = reverse("admin:reisen_reise_change", args=[self.reise.pk])
+        self.daten = leere_inlines(**{
+            "titel": "Herbst", "von": "2026-10-24", "bis": "2026-11-01", "urlaub_von": "", "urlaub_bis": "",
+            "fahrzeugprofil": "", "verbrauch_l_100km": "", "dieselpreis": "1.80", "vignetten_meiden": "",
+            "im_kalender": "on", "notizen": "", "_continue": "Sichern"})
+
+    def test_formular_mit_dateifeld(self):
+        seite = self.client.get(self.url).content.decode()
+        self.assertIn('enctype="multipart/form-data"', seite)
+        self.assertIn('name="gpx_dateien"', seite)
+        self.assertIn("multiple", seite)
+        self.assertLess(seite.index('id="tracks-group"'), seite.index('name="gpx_dateien"'))   # ganz unten
+        self.assertLess(seite.index('name="notizen"'), seite.index('id="etappen-group"'))     # übrige Felder oben
+
+    def test_mehrere_hochladen_und_uebernehmen(self):
+        zweite = FAHRT.replace(b"T14:", b"T16:")
+        antwort = self.client.post(self.url, {**self.daten, "gpx_uebernehmen": "on", "gpx_dateien": [
+            self.datei("Fahrt_1.gpx", FAHRT), self.datei("Fahrt_2.gpx.gz", gzip.compress(zweite))]}, follow=True)
+        self.assertContains(antwort, "Fahrt_1.gpx: 2,2 km ab 24.10. 16:37 hochgeladen.")
+        self.assertContains(antwort, "1 Etappe aus GPX-Tracks übernommen.")
+        self.assertEqual(Track.objects.filter(reise=self.reise).count(), 2)
+        self.assertEqual(Etappe.objects.get(pk=self.etappe.pk).entfernung_km, Decimal("4.4"))
+
+    def test_ohne_uebernehmen_und_ersetzen(self):
+        gpx.speichern(self.reise, FAHRT)
+        antwort = self.client.post(self.url, {**self.daten, "gpx_dateien": self.datei("Fahrt.gpx", FAHRT)}, follow=True)
+        self.assertContains(antwort, "Fahrt.gpx: 2,2 km ab 24.10. 16:37 ersetzt.")
+        self.assertEqual(Track.objects.count(), 1)
+        self.assertEqual(Etappe.objects.get(pk=self.etappe.pk).entfernung_km, Decimal("3.0"))
+
+    def test_kaputte_datei_speichert_nichts(self):
+        antwort = self.client.post(self.url, {**self.daten, "titel": "Neu", "gpx_dateien": [
+            self.datei("gut.gpx", FAHRT), self.datei("foto.jpg", b"\xff\xd8kein gpx")]})
+        self.assertEqual(antwort.status_code, 200)
+        self.assertContains(antwort, "foto.jpg: Die Datei ist kein GPX.")
+        self.assertFalse(Track.objects.exists())
+        self.assertEqual(Reise.objects.get(pk=self.reise.pk).titel, "Herbst")
