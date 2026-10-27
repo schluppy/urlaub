@@ -13,6 +13,9 @@
              Beide Felder rechnen wie Excel: „=24+(2*8)+4+5“ wird beim Verlassen zu 52,00
              (die Rechnung bleibt als Tooltip stehen).
    - Etappen und Buchungen als Blöcke (mehrere Zeilen je Eintrag); Währung und Kurs nur mit Haken „Fremdwährung“.
+   - Einklappen: Klick auf die Kopfzeile eines Blocks zeigt nur noch das Wesentliche (Etappe: Datum, Von → Nach;
+             Buchung: Platz, Anreise–Abreise, Nächte, Status); „Alle einklappen“ an der Überschrift gilt für alle
+             Blöcke und bleibt im Browser gemerkt. Blöcke mit Fehlern bleiben offen.
    - Alle Daten nur innerhalb der Reisezeit (von … bis), nicht des Urlaubs.
    - Zeitraum der Reise: „bis“ startet mit dem „von“-Datum (Urlaub und Reisezeit), die Reisezeit mit dem
              Urlaub – so öffnet die Datumsauswahl nicht beim heutigen Tag. Überschrieben werden nur leere,
@@ -251,9 +254,110 @@
     }
   }
 
+  // Einklappen: Blöcke auf eine Kopfzeile reduzieren (Etappen, Buchungen, eigene Buchungen einer Mitreise)
+  const KLAPPBAR = ["etappen", "buchungen", "eigene_buchungen"];
+  function merken(prefix, wert) {
+    try { localStorage.setItem("eingeklappt:" + prefix, wert ? "1" : ""); } catch (e) { /* ohne Speicher */ }
+  }
+  function gemerkt(prefix) {
+    try { return localStorage.getItem("eingeklappt:" + prefix) === "1"; } catch (e) { return false; }
+  }
+  function tag(iso) { return iso ? iso.slice(8, 10) + "." + iso.slice(5, 7) + "." : "?"; }
+  function auswahlText(zeile, name) {
+    const f = feld(zeile, name);
+    if (!f || !f.value) return "?";
+    const o = f.options ? f.options[f.selectedIndex] : null;
+    return o ? o.text : f.value;
+  }
+  // Kurzzeile aus den aktuellen Feldwerten, damit sie auch ungespeicherte Änderungen zeigt
+  function kurzText(prefix, zeile) {
+    if (prefix === "etappen") {
+      if (!feld(zeile, "datum")) return "";
+      return tag(inhalt(zeile, "datum")) + " " + auswahlText(zeile, "von_ort") + " → " + auswahlText(zeile, "nach_ort");
+    }
+    const von = inhalt(zeile, "von"), bis = inhalt(zeile, "bis");
+    if (!feld(zeile, "von")) return "";
+    const ort = feld(zeile, "ort") ? auswahlText(zeile, "ort") + " " : "";
+    const naechte = von && bis ? Math.round((new Date(bis) - new Date(von)) / 86400000) : null;
+    const teile = [ort + tag(von) + "–" + tag(bis)];
+    if (naechte !== null) teile.push(naechte + (naechte === 1 ? " Nacht" : " Nächte"));
+    if (feld(zeile, "status")) teile.push(auswahlText(zeile, "status"));
+    return teile.join(" · ");
+  }
+  function klappen(prefix, zeile, zu) {
+    const kopf = zeile.querySelector("h3");
+    if (!kopf) return;
+    zeile.classList.toggle("eingeklappt", zu);
+    kopf.setAttribute("aria-expanded", String(!zu));
+    let kurz = kopf.querySelector(".kurzzeile");
+    if (!kurz) {
+      kurz = document.createElement("span");
+      kurz.className = "kurzzeile";
+      const label = kopf.querySelector(".inline_label");
+      kopf.insertBefore(kurz, label ? label.nextSibling : null);
+    }
+    kurz.textContent = zu ? kurzText(prefix, zeile) : "";
+    kurz.hidden = !zu || !kurz.textContent;
+  }
+  function alleKnopf(prefix) {
+    const gruppe = document.getElementById(prefix + "-group");
+    return gruppe ? gruppe.querySelector(".alle-klappen") : null;
+  }
+  function knopfText(prefix) {
+    const knopf = alleKnopf(prefix);
+    if (!knopf) return;
+    const offen = zeilen(prefix).some((z) => !z.classList.contains("eingeklappt"));
+    knopf.textContent = offen ? "Alle einklappen" : "Alle ausklappen";
+  }
+  function hatFehler(zeile) { return !!zeile.querySelector(".errorlist, .errors"); }
+  function einklappenEinrichten(prefix) {
+    const gruppe = document.getElementById(prefix + "-group");
+    if (!gruppe) return;
+    const ueberschrift = gruppe.querySelector("h2");
+    if (ueberschrift && !alleKnopf(prefix)) {
+      const knopf = document.createElement("button");
+      knopf.type = "button";
+      knopf.className = "alle-klappen";
+      knopf.addEventListener("click", (ev) => {
+        ev.preventDefault();   // h2 kann in einem <summary> stehen
+        const zu = zeilen(prefix).some((z) => !z.classList.contains("eingeklappt"));
+        zeilen(prefix).forEach((z) => klappen(prefix, z, zu));
+        merken(prefix, zu);
+        knopfText(prefix);
+      });
+      ueberschrift.appendChild(knopf);
+    }
+    const zu = gemerkt(prefix);
+    zeilen(prefix).forEach((z) => klappen(prefix, z, zu && !hatFehler(z)));
+    knopfText(prefix);
+  }
+  function klappStil() {
+    if (document.getElementById("einklapp-stil")) return;
+    const stil = document.createElement("style");
+    stil.id = "einklapp-stil";
+    stil.textContent = ".inline-related > h3 { cursor: pointer; }" +
+      " .inline-related > h3::before { content: \"▾\"; display: inline-block; width: 1.1em; }" +
+      " .inline-related.eingeklappt > h3::before { content: \"▸\"; }" +
+      " .inline-related.eingeklappt > fieldset, .inline-related.eingeklappt > .errorlist { display: none; }" +
+      " .inline-related.eingeklappt > h3 .inline_label { display: none; }" +
+      " .kurzzeile { font-weight: 600; }" +
+      " .alle-klappen { float: right; margin: -2px 0; padding: 2px 10px; font-size: .75rem; cursor: pointer; }";
+    (document.head || document.documentElement).appendChild(stil);
+  }
+  document.addEventListener("click", (ev) => {
+    const kopf = ev.target.closest && ev.target.closest(".inline-related > h3");
+    if (!kopf || ev.target.closest("a, input, label, button, .delete")) return;
+    const zeile = kopf.parentElement;
+    const prefix = KLAPPBAR.find((p) => zeile.id.startsWith(p + "-"));
+    if (!prefix || zeile.id.endsWith("-empty")) return;
+    klappen(prefix, zeile, !zeile.classList.contains("eingeklappt"));
+    knopfText(prefix);
+  });
+
   document.addEventListener("formset:added", (ev) => {
     const name = ev.detail && ev.detail.formsetName;
     const neu = ev.target;
+    if (KLAPPBAR.includes(name)) { klappen(name, neu, false); knopfText(name); }
     if (name === "etappen") {
       const vorige = etappeDavor(neu);
       const datum = feld(neu, "datum");
@@ -332,6 +436,8 @@
       if (haken && reihe) reihe.hidden = !haken.checked;   // nur ein-/ausblenden, Werte bleiben
     });
     sperrStil();
+    klappStil();
+    KLAPPBAR.forEach(einklappenEinrichten);
     zeitraumGrenzen();
     grenzen();
     loeschMarkierung();
