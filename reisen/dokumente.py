@@ -12,6 +12,7 @@ from openpyxl.utils import get_column_letter
 
 from kalender.tage import zeitraum_text
 
+from . import mitreise
 from .models import Buchung, Buchungsstatus, Etappe, Kostenart, Reise
 
 EURO = '#,##0.00 "€"'
@@ -29,15 +30,17 @@ FETT = Font(bold=True)
 LINIE_OBEN = Border(top=Side(style="medium", color=BLAU))
 
 
-def reise_laden(pk, familie):
-    """Reise mit allem Zubehör – nur aus der angegebenen Familie (sonst Reise.DoesNotExist)."""
-    return (Reise.objects.filter(familie=familie).select_related("fahrzeugprofil", "familie")
-            .prefetch_related(
-                Prefetch("etappen", queryset=Etappe.objects.select_related(
-                    "von_ort", "nach_ort", "fahrzeugprofil")),
-                Prefetch("buchungen", queryset=Buchung.objects.select_related("ort")),
-                "kosten", "links")
-            .get(pk=pk))
+def reise_laden(pk, familie, mitreisend=True):
+    """Reise mit allem Zubehör, so wie die Familie sie sieht – eigene und (mit `mitreisend`)
+    gemeinsame Reisen; sonst Reise.DoesNotExist."""
+    reisen = (Reise.objects.select_related("fahrzeugprofil", "familie")
+              .prefetch_related(
+                  Prefetch("etappen", queryset=Etappe.objects.select_related(
+                      "von_ort", "nach_ort", "fahrzeugprofil")),
+                  Prefetch("buchungen", queryset=Buchung.objects.select_related("ort")),
+                  "kosten", "links", mitreise.prefetch_familie()))
+    reisen = mitreise.sichtbar(familie, reisen) if mitreisend else reisen.filter(familie=familie)
+    return mitreise.fuer([reisen.get(pk=pk)], familie)[0]
 
 
 def stand_jetzt():

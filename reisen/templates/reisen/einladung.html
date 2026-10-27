@@ -1,0 +1,19 @@
+{% extends "portal/base.html" %}
+{% block titel %}Einladung · {{ reise.titel }}{% endblock %}
+{% block inhalt %}
+<div class="reisekopf" style="--monat: {{ farbe }}">
+  <h1>Einladung: {{ reise.titel }}</h1>
+  <p class="zeitraum-gross">Urlaub {{ reise.urlaub_beginn|date:"l, d.m.Y" }} – {{ reise.urlaub_ende|date:"l, d.m.Y" }}</p>
+</div>
+<section class="flaeche betont">
+  <p>{% if m.eingeladen_von %}{{ m.eingeladen_von }} (Familie {{ reise.familie }}){% else %}Familie {{ reise.familie }}{% endif %}
+    lädt euch ein, die Reise gemeinsam zu planen.</p>
+  <p class="leise">Nehmt ihr an, seht ihr die Reise vollständig – Etappen, Plätze, Links und Karte; die pflegt Familie {{ reise.familie }}.
+    Euer Fahrzeug, Kraftstoffpreis, Notizen, eure Buchungsdetails (Status, Nummer, Stellplatz, Preise), Kosten,
+    Erinnerungen und GPX-Tracks tragt ihr selbst ein. Sie sieht nur eure Familie.</p>
+  <form method="post" class="aktionen">{% csrf_token %}
+    <button class="knopf" type="submit" name="aktion" value="annehmen">Annehmen</button>
+    <button class="knopf zweit" type="submit" name="aktion" value="ablehnen">Ablehnen</button>
+  </form>
+</section>
+{% endblock %}

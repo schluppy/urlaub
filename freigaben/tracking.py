@@ -9,7 +9,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.utils import timezone
 
-from reisen.models import Etappe, Reise
+from reisen.mitreise import sichtbar
+from reisen.models import Etappe
 
 TAGE = 30
 REISEN = 5   # so viele Reisen bietet die App zum Hochladen eines Tracks an
@@ -27,7 +28,7 @@ def _ort(ort):
 def daten(familie):
     heute = timezone.localdate()
     etappen = (Etappe.objects
-               .filter(reise__familie=familie, reise__im_kalender=True,
+               .filter(reise__in=sichtbar(familie), reise__im_kalender=True,
                        datum__gte=heute - timedelta(days=1), datum__lte=heute + timedelta(days=TAGE))
                .select_related("reise", "von_ort", "nach_ort")
                .order_by("datum", "startzeit", "id"))
@@ -49,7 +50,7 @@ def reisen(familie, datum):
     def abstand(r):
         return max((r.von - datum).days, (datum - r.bis).days, 0)
 
-    liste = sorted(Reise.objects.filter(familie=familie), key=lambda r: (abstand(r), not r.im_kalender, r.von))
+    liste = sorted(sichtbar(familie), key=lambda r: (abstand(r), not r.im_kalender, r.von))
     return {"reisen": [{
         "id": r.pk,
         "titel": r.titel + ("" if r.im_kalender else " (Alternative)"),

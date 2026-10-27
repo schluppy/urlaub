@@ -7,6 +7,7 @@ from datetime import timedelta
 
 from django.contrib.admin.models import LogEntry
 from django.db.models import Count, Max, Q, Sum
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from freigaben.models import Freigabe, Kalenderabo, Widgetzugang
@@ -44,7 +45,8 @@ def kennzahlen():
     etappen = _je_familie(Etappe.objects.all(), "reise__familie", etappen=Count("pk"),
                           km=Sum("entfernung_km"))
     buchungen = _je_familie(Buchung.objects.all(), "reise__familie", buchungen=Count("pk"))
-    tracks = _je_familie(Track.objects.all(), "reise__familie", gpx=Count("pk"), gpx_km=Sum("entfernung_km"))
+    tracks = _je_familie(Track.objects.annotate(familie=Coalesce("mitreise__familie", "reise__familie")),
+                         gpx=Count("pk"), gpx_km=Sum("entfernung_km"))
     freigaben = _je_familie(
         Freigabe.objects.all(),
         freigaben=Count("pk"),

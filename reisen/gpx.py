@@ -169,16 +169,16 @@ def statistik(segmente):
             "hoechst_kmh": round(hoechst, 1), "hoehe": hoehe, "reihe": reihe}
 
 
-def speichern(reise, daten):
-    """Track aus GPX-Bytes anlegen. Kommt dieselbe Fahrt (gleicher Beginn) noch einmal, wird sie ersetzt.
-    Liefert (Track, ersetzt)."""
+def speichern(reise, daten, mitreise=None):
+    """Track aus GPX-Bytes anlegen – mit `mitreise` als Track der mitreisenden Familie. Kommt dieselbe
+    Fahrt (gleicher Beginn) noch einmal, wird sie ersetzt. Liefert (Track, ersetzt)."""
     from .models import Track
 
     text = entpacken(daten)
     name, segmente = lesen(text)
     werte = kennzahlen(segmente)
     track, neu = Track.objects.update_or_create(
-        reise=reise, beginn=werte["beginn"],
+        reise=reise, mitreise=mitreise, beginn=werte["beginn"],
         defaults={"name": name[:120], "gpx": text.decode("utf-8", "replace"),
                   **{k: v for k, v in werte.items() if k != "beginn"}})
     return track, not neu
@@ -247,7 +247,7 @@ def zuordnen(reise):
     """{Etappe: [Tracks]} und die Tracks ohne passende Etappe."""
     etappen = list(reise.etappen.select_related("von_ort", "nach_ort"))
     zuordnung, ohne = {}, []
-    for track in reise.tracks.defer("gpx"):
+    for track in reise.eigene_tracks().defer("gpx"):
         etappe = etappe_fuer(track, etappen)
         if etappe is None:
             ohne.append(track)

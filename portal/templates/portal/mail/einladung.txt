@@ -1,0 +1,11 @@
+Hallo {{ person.name }},
+
+{{ von }} lädt eure Familie ein, die Reise „{{ reise.titel }}“ ({{ reise.urlaub_beginn|date:"d.m." }} – {{ reise.urlaub_ende|date:"d.m.Y" }}) gemeinsam im Urlaubsplaner zu planen.
+
+Annehmen oder ablehnen:
+
+{{ link }}
+
+Nimmt einer von euch an, seht ihr die Reise mit Etappen, Plätzen und Karte. Euer Fahrzeug,
+eure Buchungsdetails, Kosten, Erinnerungen und GPX-Tracks tragt ihr selbst ein – die sieht
+nur eure Familie.

@@ -9,13 +9,14 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from kalender.tage import zeitraum_text
-from konten.mandant import FamilienMixin
+from konten.mandant import FamilienMixin, familie_von
 from orte.models import Ort
 from portal.templatetags.urlaub import dauer, euro, km, zahl
 
-from . import gpx
+from . import dokumente, gpx, mitreise
 from .formulare import PickerMixin, PreisFeld
-from .models import Buchung, Erinnerung, Etappe, Kostenposition, Link, Reise, Track
+from .models import (Buchung, Erinnerung, Etappe, Kostenposition, Link, Mitreise, MitreiseBuchung, MitreiseKosten,
+                     Reise, Track)
 from .routing import profil_hinweis, reise_routen
 
 
@@ -190,7 +191,8 @@ class TrackInline(FamilienMixin, admin.TabularInline):
         return False
 
     def get_queryset(self, request):
-        return super().get_queryset(request).defer("gpx", "linie")
+        # Tracks mitreisender Familien hängen an derselben Reise, gehören aber ihnen
+        return super().get_queryset(request).filter(mitreise__isnull=True).defer("gpx", "linie")
 
 
 class MehrereDateien(forms.ClearableFileInput):
@@ -244,6 +246,12 @@ class ErinnerungAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
     search_fields = ["text", "reise__titel"]
     autocomplete_fields = ["reise"]
     readonly_fields = ["gesendet_am"]
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        feld = super().formfield_for_foreignkey(db_field, request, **kwargs)
+        if db_field.name == "reise" and familie_von(request):   # auch gemeinsame Reisen, bei denen man mitreist
+            feld.queryset = mitreise.sichtbar(familie_von(request))
+        return feld
 
 
 @admin.register(Reise)
@@ -329,6 +337,18 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
             messages.warning(request, hinweis)
         return redirect("admin:reisen_reise_change", pk)
 
+    def get_deleted_objects(self, objs, request):
+        """Die Bestätigung listet sonst auch Erinnerungen, Kosten und Tracks mitreisender Familien auf –
+        die gehen die Familie der Reise nichts an. Dann nur die Reise und wer davon betroffen ist."""
+        to_delete, model_count, perms_needed, protected = super().get_deleted_objects(objs, request)
+        mitreisen = Mitreise.objects.filter(reise__in=objs).select_related("familie", "reise")
+        if mitreisen:
+            to_delete = [str(r) for r in objs] + [[
+                f"Gemeinsame Reise mit Familie {m.familie}: ihre eigenen Angaben zu „{m.reise.titel}“"
+                for m in mitreisen]]
+            model_count = {}
+        return to_delete, model_count, perms_needed, protected
+
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related(
             Prefetch("etappen", queryset=Etappe.objects.select_related("fahrzeugprofil")),
@@ -353,19 +373,178 @@ class ReiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
 
     @admin.display(description="Übersicht")
     def berechnet(self, obj):
-        if not obj.pk:
-            return "Wird nach dem Speichern berechnet."
-        zeilen = [
-            ("Urlaubstage", obj.urlaubstage or "kein Urlaubstag"),
-            ("Nächte (Buchungen)", obj.naechte),
-            ("Entfernung", km(obj.entfernung_km)),
-            ("Fahrzeit", dauer(obj.fahrzeit)),
-            ("Kraftstoff", f"{euro(obj.dieselkosten)} ({obj.dieselliter:.0f} L × {obj.dieselpreis} €; {obj.diesel_quelle})"
-             if obj.dieselliter else "Verbrauch fehlt (Fahrzeugprofil oder Feld oben)"),
-            ("Buchungen", euro(obj.buchungen_eur)),
-            ("Weitere Kosten", euro(obj.kostenpositionen_eur)),
-            ("Gesamt", euro(obj.gesamtkosten)),
-            ("Noch offen", euro(obj.offen_eur)),
-        ]
-        return format_html("<table>{}</table>", format_html("".join(
-            format_html("<tr><th style='padding-right:1em'>{}</th><td>{}</td></tr>", k, v) for k, v in zeilen)))
+        return berechnet_tabelle(obj)
+
+
+def berechnet_tabelle(obj):
+    if not obj.pk:
+        return "Wird nach dem Speichern berechnet."
+    zeilen = [
+        ("Urlaubstage", obj.urlaubstage or "kein Urlaubstag"),
+        ("Nächte (Buchungen)", obj.naechte),
+        ("Entfernung", km(obj.entfernung_km)),
+        ("Fahrzeit", dauer(obj.fahrzeit)),
+        ("Kraftstoff", f"{euro(obj.dieselkosten)} ({obj.dieselliter:.0f} L × {obj.dieselpreis} €; {obj.diesel_quelle})"
+         if obj.dieselliter else "Verbrauch fehlt (Fahrzeugprofil oder Feld oben)"),
+        ("Buchungen", euro(obj.buchungen_eur)),
+        ("Weitere Kosten", euro(obj.kostenpositionen_eur)),
+        ("Gesamt", euro(obj.gesamtkosten)),
+        ("Noch offen", euro(obj.offen_eur)),
+    ]
+    return format_html("<table>{}</table>", format_html("".join(
+        format_html("<tr><th style='padding-right:1em'>{}</th><td>{}</td></tr>", k, v) for k, v in zeilen)))
+
+
+# --- Gemeinsame Reise: was die mitreisende Familie selbst einträgt ---------------
+
+
+class MitreiseBuchungForm(forms.ModelForm):
+    class Meta:
+        model = MitreiseBuchung
+        fields = MitreiseBuchung.EIGENE_FELDER
+        field_classes = {"preis_pro_nacht": PreisFeld, "gesamtpreis": PreisFeld}
+        widgets = {k: v for k, v in BuchungForm.Meta.widgets.items() if k in MitreiseBuchung.EIGENE_FELDER}
+
+
+class MitreiseBuchungInline(FamilienMixin, PickerMixin, admin.StackedInline):
+    """Je Buchung der Reise die eigenen Angaben; Platz und Zeitraum legt die Familie der Reise fest."""
+
+    familien_pfad = "mitreise__familie"
+    model = MitreiseBuchung
+    form = MitreiseBuchungForm
+    extra = 0
+    can_delete = False
+    fieldsets = [(None, {"fields": [
+        "platz",
+        ("status", "buchungsnummer", "stellplatz"),
+        ("preis_pro_nacht", "gesamtpreis", "anzahlung", "rest_faellig_am"),
+        "summe_anzeige",
+    ]})]
+    readonly_fields = ["platz", "summe_anzeige"]
+
+    def has_add_permission(self, request, *args):
+        return False
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("buchung__ort")
+
+    def get_formset(self, request, obj=None, **kwargs):
+        formset = super().get_formset(request, obj, **kwargs)
+        # eigenes Präfix: eingabe.js behandelt „buchungen“ als Buchungen mit Platzauswahl
+        formset.get_default_prefix = classmethod(lambda cls: "eigene_buchungen")
+        return formset
+
+    @admin.display(description="Platz")
+    def platz(self, obj):
+        b = obj.buchung
+        text = f"{b.ort} · {b.von:%d.%m.} – {b.bis:%d.%m.%Y} ({b.naechte} N.)"
+        if b.ist_fremdwaehrung:
+            text += f" · Preise in {b.waehrung}, Kurs {b.wechselkurs}"
+        if b.status == "storniert":
+            text += f" · bei Familie {b.reise.familie} storniert"
+        return text
+
+    @admin.display(description="Nächte / Summe / Rest")
+    def summe_anzeige(self, obj):
+        return BuchungInline.summe_anzeige(self, obj.als_buchung()) if obj.pk else "–"
+
+
+class MitreiseKostenInline(FamilienMixin, admin.TabularInline):
+    familien_pfad = "mitreise__familie"
+    model = MitreiseKosten
+    extra = 0
+
+
+class MitreiseErinnerungInline(ErinnerungInline):
+    fk_name = "mitreise"
+
+
+class MitreiseTrackInline(TrackInline):
+    familien_pfad = "mitreise__familie"
+    fk_name = "mitreise"
+
+    def get_queryset(self, request):
+        return super(TrackInline, self).get_queryset(request).defer("gpx", "linie")
+
+
+class MitreiseForm(forms.ModelForm):
+    gpx_dateien = GpxFeld(label="GPX-Dateien", required=False,
+                          help_text="Eure gefahrenen Strecken, z. B. aus der App „Tracking“ oder einem Navi. "
+                                    "Mehrere auf einmal möglich; dieselbe Fahrt noch einmal ersetzt die alte.")
+
+    class Meta:
+        model = Mitreise
+        fields = ["fahrzeugprofil", "verbrauch_l_100km", "dieselpreis", "notizen"]
+
+
+@admin.register(Mitreise)
+class MitreiseAdmin(FamilienMixin, PickerMixin, admin.ModelAdmin):
+    """Gemeinsame Reise aus Sicht der mitreisenden Familie: nur ihre eigenen Angaben."""
+
+    list_display = ["reise_titel", "zeitraum", "familie_der_reise", "angenommen_am"]
+    save_on_top = True
+    form = MitreiseForm
+    inlines = [MitreiseBuchungInline, MitreiseKostenInline, MitreiseErinnerungInline, MitreiseTrackInline]
+    fieldsets = [
+        (None, {"fields": ["reise_anzeige"]}),
+        ("Fahrt", {"fields": ["fahrzeugprofil", ("verbrauch_l_100km", "dieselpreis")],
+                   "description": "Euer Gespann – für eure Kraftstoffkosten auf den gemeinsamen Etappen."}),
+        ("Berechnet", {"fields": ["berechnet"]}),
+        (None, {"fields": ["notizen"]}),
+        # muss der letzte Abschnitt bleiben: change_form.html zeigt ihn unter den GPX-Tracks
+        ("GPX-Tracks hochladen", {"fields": ["gpx_dateien"]}),
+    ]
+    readonly_fields = ["reise_anzeige", "berechnet"]
+
+    class Media:
+        js = ["reisen/eingabe.js"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).filter(angenommen_am__isnull=False).select_related("reise__familie")
+
+    def has_add_permission(self, request, *args):
+        return False   # entsteht durch eine Einladung
+
+    def get_object(self, request, object_id, from_field=None):
+        obj = super().get_object(request, object_id, from_field)
+        if obj is not None:
+            obj.buchungen_ergaenzen()   # Buchungen, die die Familie der Reise inzwischen angelegt hat
+        return obj
+
+    def save_related(self, request, form, formsets, change):
+        super().save_related(request, form, formsets, change)
+        for name, inhalt in form.cleaned_data.get("gpx_dateien") or []:
+            track, ersetzt = gpx.speichern(form.instance.reise, inhalt, mitreise=form.instance)
+            messages.success(request, f"{name}: {zahl(track.entfernung_km, 1)} km ab {timezone.localtime(track.beginn):%d.%m. %H:%M} "
+                                      f"{'ersetzt' if ersetzt else 'hochgeladen'}.")
+
+    def response_change(self, request, obj):
+        if "_planer" in request.POST:
+            return redirect("reisen:reise", obj.reise_id)
+        return super().response_change(request, obj)
+
+    def response_delete(self, request, obj_display, obj_id):
+        return redirect("portal:start")
+
+    @admin.display(description="Reise", ordering="reise__titel")
+    def reise_titel(self, obj):
+        return obj.reise.titel
+
+    @admin.display(description="Zeitraum", ordering="reise__von")
+    def zeitraum(self, obj):
+        return zeitraum_text(obj.reise.von, obj.reise.bis) + f" {obj.reise.bis:%Y}"
+
+    @admin.display(description="gemeinsam mit")
+    def familie_der_reise(self, obj):
+        return f"Familie {obj.reise.familie}"
+
+    @admin.display(description="Reise")
+    def reise_anzeige(self, obj):
+        return format_html('<a href="{}"><b>{}</b></a> · {}<br>Zeitraum, Etappen, Plätze und Links pflegt Familie {}. '
+                           "Alles hier gehört nur euch – die andere Familie sieht es nicht.",
+                           reverse("reisen:reise", args=[obj.reise_id]), obj.reise.titel,
+                           self.zeitraum(obj), obj.reise.familie)
+
+    @admin.display(description="Übersicht")
+    def berechnet(self, obj):
+        return berechnet_tabelle(dokumente.reise_laden(obj.reise_id, obj.familie))

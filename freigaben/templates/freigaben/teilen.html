@@ -62,6 +62,36 @@
 </ul>
 {% endif %}
 
+{% if reise %}
+<section class="flaeche" id="gemeinsam" aria-labelledby="gemeinsam-titel">
+  <h2 id="gemeinsam-titel">Gemeinsam reisen</h2>
+  <p class="leise klein">Eine andere Familie im Urlaubsplaner einladen: Sie sieht die Reise vollständig (auch euer Zuhause als Start der Etappen)
+    und trägt Fahrzeug, Notizen, Buchungsdetails, Kosten, Erinnerungen und GPX-Tracks selbst ein – die seht ihr nicht, und sie nicht eure.
+    Zeitraum, Etappen, Plätze und Links pflegt ihr.</p>
+  {% if mitreisen %}
+  <ul class="freigaben">
+    {% for m in mitreisen %}
+    <li><b>Familie {{ m.familie }}</b> ·
+      {% if m.angenommen_am %}reist mit seit {{ m.angenommen_am|date:"d.m.Y" }}{% else %}eingeladen am {{ m.eingeladen_am|date:"d.m.Y" }}{% if m.eingeladen_von %} von {{ m.eingeladen_von }}{% endif %}, noch nicht angenommen{% endif %}
+      <form method="post" action="{% url 'reisen:mitreise_beenden' m.pk %}" class="beenden"
+            {% if m.angenommen_am %}onsubmit="return confirm('Familie {{ m.familie|escapejs }} sieht die Reise dann nicht mehr; ihre eigenen Angaben zu dieser Reise werden gelöscht.')"{% endif %}>{% csrf_token %}
+        <button class="knopf gefahr" type="submit">{% if m.angenommen_am %}Entfernen{% else %}Einladung zurückziehen{% endif %}</button></form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <form method="post" action="{% url 'reisen:einladen' reise.pk %}">
+    {% csrf_token %}
+    <div class="feld">
+      <label for="einladen-email">E-Mail-Adresse einer Person aus der anderen Familie</label>
+      <input type="email" name="email" id="einladen-email" required autocomplete="off">
+      <p class="leise klein">Alle Mitglieder dieser Familie bekommen eine Mail; nimmt eine Person an, gilt es für die ganze Familie.</p>
+    </div>
+    <button class="knopf" type="submit">Familie einladen</button>
+  </form>
+</section>
+{% endif %}
+
 {% if alte %}
 <h2>Abgelaufen oder beendet</h2>
 <ul class="klein leise">

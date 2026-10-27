@@ -3,6 +3,7 @@
 Alles, was in der Tabelle von Hand gerechnet wurde (Nächte, Kraftstoffkosten,
 Summen, Urlaubstage), wird hier berechnet und nicht gespeichert.
 """
+import copy
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
@@ -57,7 +58,13 @@ class Reise(models.Model):
 
     ICAL_FELDER = {"ical_pruefsumme", "ical_version", "ical_geaendert"}
 
+    # Gesetzt, wenn eine mitreisende Familie die Reise ansieht (mitreise.ansicht): dann gelten ihr
+    # Fahrzeug, ihre Notizen, Buchungsdetails und Kosten – nur im Speicher, gespeichert wird so nie.
+    mitreise = None
+
     def save(self, *args, **kwargs):
+        if self.mitreise is not None:
+            raise RuntimeError("Ansicht einer mitreisenden Familie – nicht speicherbar")
         # Die Termin-Version pflegt nur der Kalender-Feed; ein normales Speichern (Verwaltung)
         # darf sie nicht mit einem veralteten Stand überschreiben.
         if self.pk and not self._state.adding and kwargs.get("update_fields") is None:
@@ -118,7 +125,16 @@ class Reise(models.Model):
 
     @property
     def bundesland(self):
-        return self.familie.bundesland
+        return (self.mitreise or self).familie.bundesland
+
+    @property
+    def ansicht_familie(self):
+        """Die Familie, aus deren Sicht die Reise gerade gezeigt wird."""
+        return (self.mitreise or self).familie
+
+    def eigene_tracks(self):
+        """GPX-Tracks der Familie, die die Reise ansieht – Mitreisende haben ihre eigenen."""
+        return self.tracks.filter(mitreise=self.mitreise)
 
     @property
     def jahr(self):
@@ -561,6 +577,8 @@ class Erinnerung(models.Model):
 
     familie = models.ForeignKey("konten.Familie", on_delete=models.CASCADE, related_name="erinnerungen")
     reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="erinnerungen", null=True, blank=True)
+    mitreise = models.ForeignKey("Mitreise", on_delete=models.CASCADE, related_name="erinnerungen", null=True,
+                                 blank=True, editable=False)
     datum = models.DateField("Erinnern am")
     text = models.CharField("Text", max_length=200)
     gesendet_am = models.DateTimeField("gesendet am", null=True, blank=True)
@@ -575,6 +593,8 @@ class Erinnerung(models.Model):
         return f"{self.datum:%d.%m.%Y} {self.text}"
 
     def save(self, *args, **kwargs):
+        if self.mitreise_id:   # Erinnerung einer mitreisenden Familie zu deren gemeinsamer Reise
+            self.reise_id, self.familie_id = self.mitreise.reise_id, self.mitreise.familie_id
         if self.reise_id and not self.familie_id:
             self.familie_id = self.reise.familie_id
         super().save(*args, **kwargs)
@@ -596,6 +616,8 @@ class Track(models.Model):
     kann damit Entfernung, Fahrzeit und Linie der passenden Etappe ersetzen."""
 
     reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="tracks")
+    mitreise = models.ForeignKey("Mitreise", on_delete=models.CASCADE, related_name="tracks", null=True, blank=True,
+                                 editable=False, help_text="leer = Track der Familie, der die Reise gehört")
     name = models.CharField("Name", max_length=120, blank=True)
     beginn = models.DateTimeField("Beginn")
     ende = models.DateTimeField("Ende")
@@ -618,3 +640,101 @@ class Track(models.Model):
     def dateiname(self):
         """Wie in der App: Fahrt_JJJJ-MM-TT_HH-MM.gpx (Ortszeit des Beginns)."""
         return f"Fahrt_{timezone.localtime(self.beginn):%Y-%m-%d_%H-%M}.gpx"
+
+
+# --- Gemeinsam reisen ---------------------------------------------------------
+
+
+class Mitreise(models.Model):
+    """Eine andere Familie reist mit. Sie sieht die Reise vollständig; Zeitraum, Etappen, Plätze und Links
+    pflegt die Familie, der die Reise gehört. Fahrzeug, Kraftstoffpreis, Notizen, Buchungsdetails,
+    Kosten, Erinnerungen und GPX-Tracks hat jede Familie für sich.
+    Ohne `angenommen_am` ist es erst eine Einladung."""
+
+    reise = models.ForeignKey(Reise, on_delete=models.CASCADE, related_name="mitreisen")
+    familie = models.ForeignKey("konten.Familie", verbose_name="Familie", on_delete=models.CASCADE,
+                                related_name="mitreisen")
+    eingeladen_von = models.ForeignKey("konten.Person", on_delete=models.SET_NULL, null=True, blank=True,
+                                       related_name="+")
+    eingeladen_am = models.DateTimeField(auto_now_add=True)
+    angenommen_am = models.DateTimeField("angenommen am", null=True, blank=True)
+    fahrzeugprofil = models.ForeignKey(Fahrzeugprofil, verbose_name="Fahrzeugprofil", on_delete=models.PROTECT,
+                                       null=True, blank=True, related_name="+")
+    verbrauch_l_100km = models.DecimalField(
+        "Ø Verbrauch (L/100 km)", max_digits=4, decimal_places=1, null=True, blank=True,
+        help_text="leer = Wert aus dem Fahrzeugprofil")
+    dieselpreis = models.DecimalField("Kraftstoffpreis (€/L)", max_digits=5, decimal_places=3, default=Decimal("1.80"))
+    notizen = models.TextField("Notizen", blank=True)
+    ical_pruefsumme = models.CharField(max_length=64, blank=True, editable=False)
+    ical_version = models.PositiveIntegerField(default=0, editable=False)
+    ical_geaendert = models.DateTimeField(null=True, blank=True, editable=False)
+
+    class Meta:
+        verbose_name = "Gemeinsame Reise"
+        verbose_name_plural = "Gemeinsame Reisen"
+        ordering = ["-reise__von"]
+        constraints = [models.UniqueConstraint(fields=["reise", "familie"], name="mitreise_je_familie")]
+
+    def __str__(self):
+        return f"{self.reise} – mit Familie {self.reise.familie}"
+
+    def buchungen_ergaenzen(self):
+        """Zu jeder Buchung der Reise eine eigene Zeile für Status, Preise usw. anlegen."""
+        vorhanden = set(self.buchungen.values_list("buchung_id", flat=True))
+        MitreiseBuchung.objects.bulk_create([MitreiseBuchung(mitreise=self, buchung=b)
+                                             for b in self.reise.buchungen.all() if b.pk not in vorhanden])
+
+
+class MitreiseBuchung(models.Model):
+    """Die eigenen Angaben einer mitreisenden Familie zu einer Buchung der Reise. Platz und Zeitraum
+    kommen aus der Buchung, Währung und Kurs ebenfalls."""
+
+    EIGENE_FELDER = ["status", "buchungsnummer", "stellplatz", "preis_pro_nacht", "gesamtpreis", "anzahlung",
+                     "rest_faellig_am"]
+
+    mitreise = models.ForeignKey(Mitreise, on_delete=models.CASCADE, related_name="buchungen")
+    buchung = models.ForeignKey(Buchung, on_delete=models.CASCADE, related_name="mitreisende")
+    status = models.CharField("Status", max_length=12, choices=Buchungsstatus.choices,
+                              default=Buchungsstatus.GEPLANT)
+    buchungsnummer = models.CharField("Buchungsnr.", max_length=60, blank=True)
+    stellplatz = models.CharField("Stellplatz", max_length=40, blank=True, help_text="z. B. Platz 47 oder Parzelle B12")
+    preis_pro_nacht = models.DecimalField("Preis/Nacht", max_digits=8, decimal_places=2, null=True, blank=True)
+    gesamtpreis = models.DecimalField("Gesamtpreis", max_digits=9, decimal_places=2, null=True, blank=True,
+                                      help_text="für den ganzen Aufenthalt – statt Preis/Nacht")
+    anzahlung = models.DecimalField("Anzahlung", max_digits=8, decimal_places=2, default=Decimal(0),
+                                    help_text="in Buchungswährung")
+    rest_faellig_am = models.DateField("Rest fällig am", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Buchung"
+        verbose_name_plural = "Buchungen"
+        ordering = ["buchung__von", "buchung_id"]
+        constraints = [models.UniqueConstraint(fields=["mitreise", "buchung"], name="mitreise_buchung_einmal")]
+
+    def __str__(self):
+        return str(self.buchung)
+
+    def clean(self):
+        self.als_buchung().clean()
+
+    def als_buchung(self, buchung=None):
+        """Die Buchung der Reise mit den eigenen Angaben – ungespeichert, rechnet wie jede Buchung."""
+        b = copy.copy(buchung or self.buchung)
+        for feld in self.EIGENE_FELDER:
+            setattr(b, feld, getattr(self, feld))
+        return b
+
+
+class MitreiseKosten(models.Model):
+    mitreise = models.ForeignKey(Mitreise, on_delete=models.CASCADE, related_name="kosten")
+    art = models.CharField("Art", max_length=12, choices=Kostenart.choices, default=Kostenart.SONSTIGES)
+    betrag = models.DecimalField("Betrag (€)", max_digits=8, decimal_places=2)
+    notiz = models.CharField("Notiz", max_length=200, blank=True)
+
+    class Meta:
+        verbose_name = "Kostenposition"
+        verbose_name_plural = "Kostenpositionen"
+        ordering = ["art", "id"]
+
+    def __str__(self):
+        return f"{self.get_art_display()} {self.betrag} €"

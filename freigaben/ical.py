@@ -13,7 +13,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from kalender.tage import zeitraum_text
-from reisen.models import Reise
+from reisen import mitreise as gemeinsam
+from reisen.mitreise import sichtbar
 
 
 def _text(wert):
@@ -60,15 +61,17 @@ def _utc(zeitpunkt):
 
 def version(reise, inhalt):
     """(SEQUENCE, LAST-MODIFIED) des Termins. Ändert sich der Inhalt, steigt die Version –
-    ohne steigende Version übernehmen manche Kalender (Google) geänderte Termine nicht."""
+    ohne steigende Version übernehmen manche Kalender (Google) geänderte Termine nicht.
+    Eine mitreisende Familie hat ihre eigene Version – ihr Termin zeigt ihre Buchungen."""
+    stand = reise.mitreise or reise
     pruefsumme = hashlib.sha256("\n".join(inhalt).encode()).hexdigest()
-    if pruefsumme != reise.ical_pruefsumme:
-        reise.ical_version = reise.ical_version + 1 if reise.ical_pruefsumme else 0
-        reise.ical_pruefsumme = pruefsumme
-        reise.ical_geaendert = timezone.now()
-        Reise.objects.filter(pk=reise.pk).update(ical_pruefsumme=pruefsumme, ical_version=reise.ical_version,
-                                                 ical_geaendert=reise.ical_geaendert)
-    return reise.ical_version, reise.ical_geaendert
+    if pruefsumme != stand.ical_pruefsumme:
+        stand.ical_version = stand.ical_version + 1 if stand.ical_pruefsumme else 0
+        stand.ical_pruefsumme = pruefsumme
+        stand.ical_geaendert = timezone.now()
+        type(stand).objects.filter(pk=stand.pk).update(ical_pruefsumme=pruefsumme, ical_version=stand.ical_version,
+                                                       ical_geaendert=stand.ical_geaendert)
+    return stand.ical_version, stand.ical_geaendert
 
 
 def kalender(familie):
@@ -77,8 +80,9 @@ def kalender(familie):
     zeilen = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Urlaubsplaner//DE", "CALSCALE:GREGORIAN",
               "METHOD:PUBLISH", f"X-WR-CALNAME:{_text('Urlaube ' + familie.name)}", "X-WR-TIMEZONE:Europe/Berlin",
               "REFRESH-INTERVAL;VALUE=DURATION:PT6H", "X-PUBLISHED-TTL:PT6H"]
-    reisen = (Reise.objects.filter(familie=familie, im_kalender=True).select_related("familie")
-              .prefetch_related("buchungen__ort", "etappen__von_ort", "etappen__nach_ort").order_by("von"))
+    reisen = gemeinsam.fuer(sichtbar(familie).filter(im_kalender=True).select_related("familie")
+                            .prefetch_related("buchungen__ort", "etappen__von_ort", "etappen__nach_ort").order_by("von"),
+                            familie)
     for r in reisen:
         link = settings.BASIS_URL + reverse("reisen:reise", args=[r.pk])
         inhalt = [f"DTSTART;VALUE=DATE:{r.urlaub_beginn:%Y%m%d}",

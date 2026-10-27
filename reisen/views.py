@@ -4,7 +4,10 @@ from datetime import time, timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, HttpResponse
-from django.shortcuts import redirect, render
+from django.db import IntegrityError, transaction
+from django.db.models import Q
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import require_GET, require_POST
 
@@ -14,20 +17,22 @@ from orte.models import Ortstyp
 from . import aufteilen as teilung
 from . import dokumente
 from . import gpx
+from . import mitreise as gemeinsam
 from .formulare import AufteilenForm, TeilenForm
-from .models import Reise, Track
+from .models import Mitreise, Reise, Track
 from .routing import TomTomFehler, kachel, profil_hinweis, reise_routen
 
 KOSTENFARBEN = {"Kraftstoff": "#2F5D8C", "Übernachtungen": "#E39226", "Fähre": "#1F6F8B",
                 "Vignette": "#8A4F9E", "Maut": "#6F7F22", "Sonstiges": "#7A4A2E"}
 
 
-def _laden(request, pk):
-    """Nur Reisen der eigenen Familie; fremde Reisen sind „nicht gefunden“."""
+def _laden(request, pk, mitreisend=True):
+    """Eigene Reisen und (mit `mitreisend`) gemeinsame, bei denen die Familie mitreist;
+    andere Reisen sind „nicht gefunden“."""
     if request.user.familie is None:
         raise Http404
     try:
-        return dokumente.reise_laden(pk, request.user.familie)
+        return dokumente.reise_laden(pk, request.user.familie, mitreisend=mitreisend)
     except Reise.DoesNotExist:
         raise Http404
 
@@ -142,7 +147,7 @@ def _kontext(reise):
         x += breite
     return {
         "reise": reise, "etappen": list(reise.etappen.all()), "buchungen": list(reise.buchungen.all()),
-        "kosten": list(reise.kosten.all()), "links": list(reise.links.all()), "tracks": list(reise.tracks.defer("gpx", "linie")),
+        "kosten": list(reise.kosten.all()), "links": list(reise.links.all()), "tracks": list(reise.eigene_tracks().defer("gpx", "linie")),
         "posten": posten, "balken": balken, "hinweise": reise.hinweise(),
         "farbe": MONATSFARBEN[reise.urlaub_beginn.month - 1],
         "karte": kartendaten(reise), "fahrten": gpx.fahrten(reise),
@@ -158,7 +163,7 @@ def reise(request, pk):
 @require_POST
 @login_required
 def route(request, pk):
-    r = _laden(request, pk)
+    r = _laden(request, pk, mitreisend=False)   # Etappen pflegt die Familie, der die Reise gehört
     if not r.etappen.exists():
         messages.warning(request, "Diese Reise hat noch keine Etappen.")
         return redirect("reisen:reise", pk)
@@ -182,7 +187,7 @@ def route(request, pk):
 @login_required
 def aufteilen(request, pk, etappe):
     """Lange Etappe: Haltepunkt nach x Stunden Fahrt zeigen und die Etappe an einem Platz teilen."""
-    r = _laden(request, pk)
+    r = _laden(request, pk, mitreisend=False)
     etappe = next((e for e in r.etappen.all() if e.pk == etappe), None)
     if etappe is None:
         raise Http404
@@ -250,10 +255,13 @@ def excel(request, pk):
 
 @login_required
 def track_gpx(request, pk, track):
-    """Hochgeladenen GPX-Track unverändert herunterladen – nur aus Reisen der eigenen Familie."""
-    if request.user.familie is None:
+    """Hochgeladenen GPX-Track unverändert herunterladen – nur eigene Tracks (bei gemeinsamen Reisen
+    hat jede Familie ihre eigenen)."""
+    familie = request.user.familie
+    if familie is None:
         raise Http404
-    t = Track.objects.filter(pk=track, reise_id=pk, reise__familie=request.user.familie).first()
+    t = Track.objects.filter(Q(mitreise__isnull=True, reise__familie=familie) | Q(mitreise__familie=familie),
+                             pk=track, reise_id=pk).first()
     if t is None:
         raise Http404
     return _datei(t.gpx, t.dateiname, "application/gpx+xml")
@@ -265,3 +273,72 @@ def pdf(request, pk):
     stand = dokumente.stand_jetzt()
     return _datei(dokumente.pdf(r, _kontext(r), stand), dokumente.dateiname(r, "pdf", stand), "application/pdf",
                   anzeigen=True)
+
+
+# --- Gemeinsam reisen: Einladung an eine andere Familie ---------------------------
+
+
+@require_POST
+@login_required
+def einladen(request, pk):
+    """Eine Person einladen – angenommen wird für ihre ganze Familie; alle Mitglieder bekommen eine Mail."""
+    from konten.models import Person
+    from portal import mails
+
+    r = _laden(request, pk, mitreisend=False)
+    zurueck = reverse("freigaben:reise", args=[pk]) + "#gemeinsam"
+    email = (request.POST.get("email") or "").strip().lower()
+    person = Person.objects.filter(email=email, is_active=True, familie__isnull=False).select_related("familie").first()
+    if person is None:
+        messages.error(request, f"Unter „{email}“ ist niemand im Urlaubsplaner angemeldet.")
+        return redirect(zurueck)
+    if person.familie_id == r.familie_id:
+        messages.error(request, f"{person} gehört zu eurer Familie und sieht die Reise schon.")
+        return redirect(zurueck)
+    try:
+        with transaction.atomic():
+            m = Mitreise.objects.create(reise=r, familie=person.familie, eingeladen_von=request.user,
+                                        dieselpreis=r.dieselpreis)
+    except IntegrityError:
+        messages.info(request, f"Familie {person.familie} ist schon eingeladen.")
+        return redirect(zurueck)
+    mails.einladung(m)
+    messages.success(request, f"Familie {person.familie} ist eingeladen – alle ihre Mitglieder bekommen eine Mail.")
+    return redirect(zurueck)
+
+
+@require_POST
+@login_required
+def mitreise_beenden(request, pk):
+    """Einladung zurückziehen bzw. Familie aus der gemeinsamen Reise nehmen (Familie der Reise)."""
+    if request.user.familie is None:
+        raise Http404
+    m = get_object_or_404(Mitreise.objects.select_related("familie", "reise"), pk=pk,
+                          reise__familie=request.user.familie)
+    m.delete()
+    messages.success(request, f"Familie {m.familie} sieht „{m.reise.titel}“ nicht mehr.")
+    return redirect(reverse("freigaben:reise", args=[m.reise_id]) + "#gemeinsam")
+
+
+@login_required
+def einladung(request, pk):
+    """Einladung ansehen, annehmen oder ablehnen – für die eingeladene Familie."""
+    if request.user.familie is None:
+        raise Http404
+    m = get_object_or_404(Mitreise.objects.select_related("reise__familie", "eingeladen_von"), pk=pk,
+                          familie=request.user.familie)
+    if m.angenommen_am:
+        return redirect("reisen:reise", m.reise_id)
+    if request.method == "POST":
+        if request.POST.get("aktion") == "annehmen":
+            m.angenommen_am = timezone.now()
+            m.save(update_fields=["angenommen_am"])
+            m.buchungen_ergaenzen()
+            messages.success(request, f"Ihr reist mit! Euer Fahrzeug, eure Buchungsdetails und Kosten tragt ihr unter "
+                                      f"„Bearbeiten“ ein.")
+            return redirect("reisen:reise", m.reise_id)
+        m.delete()
+        messages.info(request, f"Einladung zu „{m.reise.titel}“ abgelehnt.")
+        return redirect("portal:start")
+    return render(request, "reisen/einladung.html", {"m": m, "reise": m.reise,
+                                                     "farbe": MONATSFARBEN[m.reise.urlaub_beginn.month - 1]})

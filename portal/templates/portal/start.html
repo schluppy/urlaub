@@ -17,6 +17,14 @@
   <a class="knopf zweit" href="{% url 'freigaben:tracking' %}">Tracking</a>
 </div>
 
+{% for m in einladungen %}
+<section class="flaeche betont">
+  <p><b>Einladung:</b> {% if m.eingeladen_von %}{{ m.eingeladen_von }} (Familie {{ m.reise.familie }}){% else %}Familie {{ m.reise.familie }}{% endif %}
+    möchte „{{ m.reise.titel }}“ ({{ m.reise.urlaub_beginn|date:"d.m." }} – {{ m.reise.urlaub_ende|date:"d.m.Y" }}) gemeinsam mit euch planen.
+    <a class="knopf" href="{% url 'reisen:einladung' m.pk %}">Ansehen</a></p>
+</section>
+{% endfor %}
+
 {% if anstehend %}
 <section class="demnaechst" aria-labelledby="demnaechst">
   <h2 id="demnaechst">Demnächst</h2>

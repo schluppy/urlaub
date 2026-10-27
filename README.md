@@ -45,6 +45,11 @@ Wie der Urlaubsplaner entstanden ist und wie er im Alltag aussieht, mit Bildern,
   Gebaut im Container mit `android/bauen.sh` bzw. `android-tracking/bauen.sh`. Der Bau braucht gut
   1,5 GB Arbeitsspeicher – auf einem knappen Server besser auf einem anderen Rechner bauen und nur die
   APK nach `widget/` kopieren (mit demselben Signierschlüssel).
+- **Gemeinsam reisen:** Über „Teilen“ eine andere Familie im Urlaubsplaner einladen (per E-Mail-Adresse
+  einer Person; alle ihre Mitglieder bekommen eine Mail). Nimmt jemand an, sieht die ganze Familie die Reise
+  vollständig – in der Jahresübersicht, im Kalender, im Kalender-Abo und in den Handy-Apps. Zeitraum, Etappen,
+  Plätze und Links pflegt die Familie der Reise; Fahrzeug und Kraftstoffpreis, Notizen, Status, Nummer,
+  Stellplatz und Preise der Buchungen, Kosten, Erinnerungen und GPX-Tracks hat jede Familie für sich.
 - **Mehrere Familien** (Mandanten) mit eigenem Bundesland und optional eigenem TomTom-Schlüssel;
   jede Familie sieht nur ihre eigenen Daten.
 - **Anmeldung ohne Passwort** über einmalig gültige Links per E-Mail.

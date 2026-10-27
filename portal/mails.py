@@ -23,3 +23,13 @@ def anmeldelink(person, ip=None, ziel=""):
         "link": _link(reverse("portal:token", args=[token])),
         "minuten": settings.MAGIC_LINK_GUELTIGKEIT_MINUTEN,
     })
+
+
+def einladung(mitreise):
+    """An alle Mitglieder der eingeladenen Familie."""
+    reise = mitreise.reise
+    for person in mitreise.familie.personen.filter(is_active=True):
+        _senden(person, f"Einladung: {reise.titel} – Urlaubsplaner", "einladung", {
+            "reise": reise, "von": mitreise.eingeladen_von or f"Familie {reise.familie}",
+            "link": _link(reverse("reisen:einladung", args=[mitreise.pk])),
+        })

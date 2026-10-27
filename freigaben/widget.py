@@ -9,7 +9,7 @@ from django.conf import settings
 from django.urls import reverse
 from django.utils import timezone
 
-from reisen.models import Reise
+from reisen.mitreise import sichtbar
 
 ANZAHL = 3
 
@@ -24,7 +24,7 @@ def beginn(reise):
 
 def daten(familie):
     heute = timezone.localdate()
-    reisen = list(Reise.objects.filter(familie=familie, im_kalender=True).prefetch_related("etappen"))
+    reisen = list(sichtbar(familie).filter(im_kalender=True).prefetch_related("etappen"))
     kommend = []
     for r in reisen:
         datum, uhrzeit = beginn(r)

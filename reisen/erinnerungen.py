@@ -16,7 +16,8 @@ from django.utils import timezone
 
 from konten.models import Familie
 
-from .models import Buchung, Buchungsstatus, Erinnerung, Etappe, Reise, Versandprotokoll
+from .mitreise import angenommen, fuer, sichtbar
+from .models import Buchung, Buchungsstatus, Erinnerung, Etappe, MitreiseBuchung, Reise, Versandprotokoll
 
 REST_VORLAUF_TAGE = 7       # erste Mail so viele Tage vor Fälligkeit
 REST_NACHLAUF_TAGE = 14     # überfällige Zahlungen nur so lange melden (alte Daten nicht anmahnen)
@@ -40,9 +41,20 @@ class Punkt:
 
 
 def _offene_buchungen(familie):
-    return (Buchung.objects.filter(reise__familie=familie).select_related("ort", "reise")
-            .exclude(status__in=[Buchungsstatus.BEZAHLT, Buchungsstatus.STORNIERT])
-            .filter(rest_faellig_am__isnull=False))
+    """Eigene Buchungen und – bei gemeinsamen Reisen – die eigenen Angaben zu Buchungen der anderen Familie.
+    Jede mit `schluessel` fürs Versandprotokoll."""
+    offen = {"rest_faellig_am__isnull": False}
+    erledigt = {"status__in": [Buchungsstatus.BEZAHLT, Buchungsstatus.STORNIERT]}
+    buchungen = []
+    for b in Buchung.objects.filter(reise__familie=familie, **offen).exclude(**erledigt).select_related("ort", "reise"):
+        b.schluessel = f"rest-{b.pk}"
+        buchungen.append(b)
+    for mb in (MitreiseBuchung.objects.filter(mitreise__in=angenommen(familie), **offen).exclude(**erledigt)
+               .select_related("buchung__ort", "buchung__reise")):
+        b = mb.als_buchung()
+        b.schluessel = f"rest-mit{mb.pk}"
+        buchungen.append(b)
+    return buchungen
 
 
 def _rest_text(b):
@@ -72,7 +84,7 @@ def restzahlungen(heute, familie, vorlauf=REST_VORLAUF_TAGE):
                     + (f", Buchungsnr. {b.buchungsnummer}" if b.buchungsnummer else "")
                     + (f", Stellplatz {b.stellplatz}" if b.stellplatz else "")]
             + ([f"Website: {b.ort.website}"] if b.ort.website else []),
-            schluessel=f"rest-{b.pk}-{b.rest_faellig_am:%Y%m%d}-{stufe}"))
+            schluessel=f"{b.schluessel}-{b.rest_faellig_am:%Y%m%d}-{stufe}"))
     return punkte
 
 
@@ -87,11 +99,11 @@ def eigene(heute, familie):
 
 
 def _reisen_ab(heute, tage, familie):
-    return (Reise.objects.filter(familie=familie, im_kalender=True, bis__gte=heute,
-                                 von__lte=heute + timedelta(days=tage + 1))
-            .select_related("fahrzeugprofil", "familie")
-            .prefetch_related(Prefetch("etappen", queryset=Etappe.objects.select_related("von_ort", "nach_ort")),
-                              Prefetch("buchungen", queryset=Buchung.objects.select_related("ort")), "kosten"))
+    return fuer(sichtbar(familie).filter(im_kalender=True, bis__gte=heute, von__lte=heute + timedelta(days=tage + 1))
+                .select_related("fahrzeugprofil", "familie")
+                .prefetch_related(Prefetch("etappen", queryset=Etappe.objects.select_related("von_ort", "nach_ort")),
+                                  Prefetch("buchungen", queryset=Buchung.objects.select_related("ort")), "kosten"),
+                familie)
 
 
 def reisechecks(heute, familie, tage=REISECHECK_TAGE):
@@ -111,7 +123,8 @@ def reisechecks(heute, familie, tage=REISECHECK_TAGE):
         punkte.append(Punkt(art="reise", datum=r.von, reise=r,
                             titel=f"{r.titel} beginnt in {bis_start} Tag{'en' if bis_start != 1 else ''}"
                             if bis_start else f"{r.titel} beginnt heute",
-                            zeilen=zeilen, schluessel=f"reise-{r.pk}-{r.von:%Y%m%d}-check"))
+                            zeilen=zeilen, schluessel=f"reise-{r.pk}{f'-mit{r.mitreise.pk}' if r.mitreise else ''}"
+                                                      f"-{r.von:%Y%m%d}-check"))
     return punkte
 
 

@@ -11,7 +11,8 @@ from django.views.decorators.http import require_POST
 
 from konten.models import MagicLinkToken, Person
 from reisen.erinnerungen import anstehend
-from reisen.models import Buchung, Etappe, Reise
+from reisen import mitreise as gemeinsam
+from reisen.models import Buchung, Etappe, Mitreise
 
 from . import mails
 
@@ -84,19 +85,19 @@ def abmelden(request):
 
 
 def reisen_im_jahr(familie, jahr, nur_kalender=False):
-    # Jahr nach Urlaubsbeginn (ohne eigenen Urlaub: Reisebeginn); nur Reisen der Familie
-    reisen = Reise.objects.filter(familie=familie).select_related("familie").annotate(beginn=Coalesce("urlaub_von", "von")).filter(beginn__year=jahr).order_by(
+    # Jahr nach Urlaubsbeginn (ohne eigenen Urlaub: Reisebeginn); Reisen der Familie und gemeinsame
+    reisen = gemeinsam.sichtbar(familie).select_related("familie").annotate(beginn=Coalesce("urlaub_von", "von")).filter(beginn__year=jahr).order_by(
         "beginn").select_related("fahrzeugprofil").prefetch_related(
         Prefetch("etappen", queryset=Etappe.objects.select_related("fahrzeugprofil")),
         Prefetch("buchungen", queryset=Buchung.objects.select_related("ort")),
         "kosten")
     if nur_kalender:
         reisen = reisen.filter(im_kalender=True)
-    return list(reisen)
+    return gemeinsam.fuer(reisen, familie)
 
 
 def _standardjahr(familie):
-    naechste = Reise.objects.filter(familie=familie, bis__gte=date.today()).order_by("von").first()
+    naechste = gemeinsam.sichtbar(familie).filter(bis__gte=date.today()).order_by("von").first()
     return naechste.jahr if naechste else date.today().year
 
 
@@ -115,9 +116,11 @@ def start(request, jahr=None):
         "kosten": sum((r.gesamtkosten for r in im_kalender), Decimal(0)),
         "offen": sum((r.offen_eur for r in im_kalender), Decimal(0)),
     }
-    jahre = sorted({r.jahr for r in Reise.objects.filter(familie=familie).select_related("familie")}
+    jahre = sorted({r.jahr for r in gemeinsam.sichtbar(familie).select_related("familie")}
                    | {jahr, date.today().year})
     return render(request, "portal/start.html", {
         "jahr": jahr, "reisen": reisen, "summen": summen, "jahre": jahre,
         "heute": date.today(), "anstehend": anstehend(date.today(), familie),
+        "einladungen": Mitreise.objects.filter(familie=familie, angenommen_am__isnull=True)
+                                       .select_related("reise__familie", "eingeladen_von"),
     })

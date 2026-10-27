@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from kalender.views import _kontext as kalender_kontext
 from kalender.views import kalender_dateiname, kalender_dokument
 from reisen import dokumente, gpx
+from reisen import mitreise as gemeinsam
 from reisen.dokumente import stand_jetzt
 from reisen.models import Reise
 from reisen.views import _kontext as reise_kontext
@@ -62,7 +63,8 @@ def _verwalten(request, art, reise=None, jahr=None):
     return render(request, "freigaben/teilen.html", {
         "form": form, "titel": reise.titel if reise else f"Urlaubskalender {jahr}", "zurueck": zurueck,
         "neu": neu, "aktive": [f for f in vorhandene if f.aktiv], "alte": [f for f in vorhandene if not f.aktiv][:10],
-        "jahr": jahr, "heute": heute, "max_datum": heute + timedelta(days=MAX_TAGE)})
+        "jahr": jahr, "heute": heute, "max_datum": heute + timedelta(days=MAX_TAGE),
+        "reise": reise, "mitreisen": gemeinsam.mitreisende(reise) if reise else []})
 
 
 @login_required
@@ -283,9 +285,12 @@ def tracking_reisen(request, token):
 @require_POST
 def tracking_hochladen(request, token, pk):
     """GPX einer Fahrt (gern gzip-komprimiert) einer Reise hinzufügen. Der geheime Link genügt als Ausweis."""
-    reise = get_object_or_404(Reise, pk=pk, familie=_zugang(token).person.familie)
+    familie = _zugang(token).person.familie
+    reise = get_object_or_404(gemeinsam.sichtbar(familie), pk=pk)
+    # bei einer gemeinsamen Reise ist es ein Track der mitreisenden Familie
+    mitreise = None if reise.familie_id == familie.pk else gemeinsam.angenommen(familie).get(reise=reise)
     try:
-        track, ersetzt = gpx.speichern(reise, request.read())
+        track, ersetzt = gpx.speichern(reise, request.read(), mitreise=mitreise)
     except gpx.GpxFehler as e:
         return JsonResponse({"fehler": str(e)}, status=400)
     etappe = gpx.etappe_fuer(track, list(reise.etappen.select_related("von_ort", "nach_ort")))
