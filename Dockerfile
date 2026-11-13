@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
 WORKDIR /app
 # WeasyPrint braucht Pango; msmtp für den Mailversand.
 # Die Kalenderschrift Barlow Condensed liegt im Projekt (static/fonts), DejaVu ist Rückfall.
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
       libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core \
       msmtp ca-certificates \
     && rm -rf /var/lib/apt/lists/*
