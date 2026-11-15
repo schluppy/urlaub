@@ -1,7 +1,13 @@
 /* Farben aus dem Jahreskalender: Dunkelblau (Schulferien), Orange (Urlaub), Rot (Feiertag). */
-@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Regular.ttf"); font-weight: 400; }
-@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-SemiBold.ttf"); font-weight: 600; }
-@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Bold.ttf"); font-weight: 700; }
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Regular.woff2") format("woff2"),
+       url("../fonts/BarlowCondensed-Regular.ttf") format("truetype");
+  font-weight: 400; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-SemiBold.woff2") format("woff2"),
+       url("../fonts/BarlowCondensed-SemiBold.ttf") format("truetype");
+  font-weight: 600; font-display: swap; }
+@font-face { font-family: "Barlow Condensed"; src: url("../fonts/BarlowCondensed-Bold.woff2") format("woff2"),
+       url("../fonts/BarlowCondensed-Bold.ttf") format("truetype");
+  font-weight: 700; font-display: swap; }
 
 :root {
   --blau: #173F73;
@@ -39,7 +45,7 @@ a { color: var(--blau); text-underline-offset: 2px; }
   display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.5rem;
 }
 .marke { display: flex; align-items: center; gap: 0.6rem; color: var(--weiss); text-decoration: none;
-  font-family: var(--schmal); font-weight: 600; font-size: 1.5rem; letter-spacing: 0.02em; }
+  font-family: var(--schmal); font-size-adjust: from-font; font-weight: 600; font-size: 1.5rem; letter-spacing: 0.02em; }
 nav.haupt { display: flex; flex-wrap: wrap; gap: 0.2rem 1.1rem; align-items: center; flex: 1; }
 nav.haupt a, nav.haupt button {
   color: var(--weiss); text-decoration: none; font: inherit; padding: 0.15rem 0;
@@ -49,7 +55,7 @@ nav.haupt a[aria-current="page"], nav.haupt a:hover, nav.haupt button:hover { bo
 nav.haupt form { margin-left: auto; }
 
 main { max-width: var(--mass); margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-h1, h2 { font-family: var(--schmal); font-weight: 600; color: var(--blau); line-height: 1.15; }
+h1, h2 { font-family: var(--schmal); font-size-adjust: from-font; font-weight: 600; color: var(--blau); line-height: 1.15; }
 h1 { font-size: 2.2rem; margin: 0 0 0.5rem; }
 h2 { font-size: 1.5rem; margin: 2rem 0 0.6rem; }
 p { max-width: 42rem; margin: 0 0 0.8rem; }
@@ -96,7 +102,7 @@ p { max-width: 42rem; margin: 0 0 0.8rem; }
 .tabelle-rahmen { overflow-x: auto; background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); }
 table.uebersicht { border-collapse: collapse; width: 100%; min-width: 46rem; }
 .uebersicht th, .uebersicht td { padding: 0.55rem 0.7rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--linie); }
-.uebersicht thead th { font-family: var(--schmal); font-weight: 600; font-size: 1.05rem; color: var(--grau); border-bottom: 2px solid var(--orange); }
+.uebersicht thead th { font-family: var(--schmal); font-size-adjust: from-font; font-weight: 600; font-size: 1.05rem; color: var(--grau); border-bottom: 2px solid var(--orange); }
 .uebersicht tfoot th, .uebersicht tfoot td { font-weight: 700; border-bottom: 0; border-top: 2px solid var(--blau); }
 .uebersicht .zahl { text-align: right; white-space: nowrap; }
 .uebersicht .zeitraum { white-space: nowrap; }
@@ -120,14 +126,14 @@ details.auswahl form { display: flex; flex-direction: column; align-items: flex-
 .kennzahlen { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.6rem; margin: 0 0 1rem; }
 .kennzahlen div { background: var(--weiss); border: 1px solid var(--linie); border-radius: var(--r); padding: 0.5rem 0.8rem; }
 .kennzahlen dt { font-size: 0.8rem; color: var(--grau); }
-.kennzahlen dd { margin: 0; font-family: var(--schmal); font-weight: 600; font-size: 1.6rem; line-height: 1.2; }
+.kennzahlen dd { margin: 0; font-family: var(--schmal); font-size-adjust: from-font; font-weight: 600; font-size: 1.6rem; line-height: 1.2; }
 .hinweise { list-style: none; padding: 0; margin: 0 0 1rem; }
 .hinweis { padding: 0.45rem 0.8rem; border-radius: 4px; margin-bottom: 0.35rem; border-left: 4px solid var(--gruen); background: var(--gruen-hell); }
 .hinweis.warnung { border-color: var(--orange-tief); background: var(--orange-hell); }
 .hinweis.fehler { border-color: var(--rot); background: var(--rot-hell); }
 table.liste { border-collapse: collapse; width: 100%; min-width: 44rem; }
 .liste th, .liste td { padding: 0.5rem 0.65rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--linie); }
-.liste thead th { font-family: var(--schmal); font-weight: 600; font-size: 1rem; color: var(--grau); border-bottom: 2px solid var(--orange); }
+.liste thead th { font-family: var(--schmal); font-size-adjust: from-font; font-weight: 600; font-size: 1rem; color: var(--grau); border-bottom: 2px solid var(--orange); }
 .liste tfoot th, .liste tfoot td { font-weight: 700; border-top: 2px solid var(--blau); border-bottom: 0; }
 .liste .zahl { text-align: right; white-space: nowrap; }
 .nowrap { white-space: nowrap; }
@@ -198,7 +204,7 @@ nav.haupt a.anmelden-link { margin-left: auto; }
 .anleitung-seite section, .anleitung-seite .tipp[id] { max-width: 46rem; scroll-margin-top: 1rem; }
 .anleitung-seite section > h3 { font-size: 1.3rem; margin: 2rem 0 0.5rem; padding-top: 0.6rem; border-top: 1px solid var(--linie); }
 .anleitung-seite h2.teil {
-  font-family: var(--schmal); font-size: 2rem; color: var(--blau); margin-top: 2.5rem;
+  font-family: var(--schmal); font-size-adjust: from-font; font-size: 2rem; color: var(--blau); margin-top: 2.5rem;
   border-bottom: 3px solid var(--orange); padding-bottom: 0.2rem;
 }
 .inhaltsverzeichnis { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0.5rem 1.5rem; }
@@ -257,7 +263,7 @@ dl.begriffe dd, dl.fragen dd { margin: 0.15rem 0 0 0; }
 .fahrt-werte { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem; margin: 0.7rem 0; }
 .fahrt-werte div { border-bottom: 1px solid var(--linie); padding-bottom: 0.3rem; }
 .fahrt-werte dt { font-size: 0.75rem; color: var(--grau); }
-.fahrt-werte dd { margin: 0; font-family: var(--schmal); font-weight: 600; font-size: 1.45rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.fahrt-werte dd { margin: 0; font-family: var(--schmal); font-size-adjust: from-font; font-weight: 600; font-size: 1.45rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .fahrt-werte small { font-size: 0.9rem; font-weight: 500; color: var(--grau); }
 .fahrt-achse { display: inline-flex; border: 1px solid var(--linie); border-radius: 999px; overflow: hidden; }
 .fahrt-achse button { font: inherit; font-size: 0.8rem; padding: 0.15rem 0.7rem; border: 0; background: var(--weiss); color: var(--blau); cursor: pointer; }
