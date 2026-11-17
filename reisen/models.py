@@ -160,6 +160,31 @@ class Reise(models.Model):
     def fahrzeit(self):
         return sum((e.fahrzeit or timedelta() for e in self._etappen()), timedelta())
 
+    def _hin_rueck(self):
+        """Etappen aufgeteilt in (Hinweg, Rückweg): getrennt wird an der längsten Pause zwischen zwei Fahrtagen
+        (dem Aufenthalt am Ziel). Bei nur einer Etappe gibt es keinen Rückweg."""
+        etappen = self._etappen()
+        if len(etappen) < 2:
+            return etappen, []
+        luecken = [(etappen[i + 1].datum - etappen[i].datum).days for i in range(len(etappen) - 1)]
+        schnitt = max(i for i, l in enumerate(luecken) if l == max(luecken)) + 1
+        return etappen[:schnitt], etappen[schnitt:]
+
+    def fahrt_kennzahlen(self, heute=None):
+        """(Bezeichnung, km, Fahrzeit) für die Anzeige: vor dem Urlaub nur Hinweg, ab Urlaubsbeginn nur
+        Rückweg, nach dem Urlaub Hin- und Rückweg zusammen."""
+        heute = heute or timezone.localdate()
+        hin, rueck = self._hin_rueck()
+        if heute > self.urlaub_ende:
+            bezeichnung, auswahl = "Hin- und Rückweg", hin + rueck
+        elif heute >= self.urlaub_beginn and rueck:
+            bezeichnung, auswahl = "Rückweg", rueck
+        else:
+            bezeichnung, auswahl = "Hinweg", hin
+        km = sum((e.entfernung_km or 0 for e in auswahl), Decimal(0))
+        zeit = sum((e.fahrzeit or timedelta() for e in auswahl), timedelta())
+        return bezeichnung, km, zeit
+
     @property
     def dieselliter(self):
         return sum((e.dieselliter or 0 for e in self._etappen()), Decimal(0))

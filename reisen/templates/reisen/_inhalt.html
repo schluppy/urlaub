@@ -1,8 +1,10 @@
 {% load urlaub %}
 <dl class="kennzahlen">
   <div><dt>Urlaubstage</dt><dd>{% if reise.urlaubstage %}{{ reise.urlaubstage }}{% else %}keiner{% endif %}</dd></div>
-  <div><dt>Entfernung</dt><dd>{{ reise.entfernung_km|km }}</dd></div>
-  <div><dt>Fahrzeit</dt><dd>{{ reise.fahrzeit|dauer }}</dd></div>
+  {% with fahrt=reise.fahrt_kennzahlen %}
+  <div><dt>Entfernung {{ fahrt.0 }}</dt><dd>{{ fahrt.1|km }}</dd></div>
+  <div><dt>Fahrzeit {{ fahrt.0 }}</dt><dd>{{ fahrt.2|dauer }}</dd></div>
+  {% endwith %}
   <div><dt>Nächte</dt><dd>{{ reise.naechte|default:"–" }}</dd></div>
   <div><dt>Kosten</dt><dd>{{ reise.gesamtkosten|euro }}</dd></div>
   {% if reise.offen_eur %}<div><dt>noch offen</dt><dd>{{ reise.offen_eur|euro }}</dd></div>{% endif %}
